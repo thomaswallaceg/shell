@@ -1,0 +1,19 @@
+---
+description: Never edit, write, or delete files outside this workspace directory
+alwaysApply: true
+---
+
+# Don't touch files outside this repo
+
+This workspace is `/home/thomas/projects/quickshell`. Personal machine config that
+this shell integrates with (e.g. `~/.config/niri/`, other dotfiles, systemd units)
+lives outside it.
+
+- Do not create, edit, or delete files outside this workspace root — even ones
+  directly related to the task (niri config, greetd config, systemd units, etc.).
+- Read those files if useful for context or diagnosis.
+- Instead of editing them, tell the user exactly what change is needed (a diff or
+  the new file contents) and let them apply it themselves.
+- Only exception: if the user explicitly asks you to make the edit yourself in
+  that specific message (e.g. "go ahead and change my niri config"), you may do so
+  for that request.

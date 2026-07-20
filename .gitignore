@@ -1,0 +1,9 @@
+# Ignore editor / OS noise
+*~
+*.swp
+.DS_Store
+
+# QML / Qt caches
+*.qmlc
+*.jsc
+.qml-cache/
