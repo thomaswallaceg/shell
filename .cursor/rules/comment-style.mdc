@@ -1,0 +1,50 @@
+---
+description: Write fewer, less verbose code comments — only when code isn't self-explanatory
+alwaysApply: true
+---
+
+# Comment Style
+
+Default to no comment. Only add one when the code's *why* — a non-obvious
+constraint, trade-off, gotcha, or intent — genuinely can't be recovered by
+reading the code itself. Never add a comment for the *what*; if a comment
+would just restate the next line in English, delete it instead.
+
+- One comment per block, not per line. Put it above the block it explains,
+  not scattered through it.
+- Keep it as short as the reasoning allows — a phrase or one sentence, not a
+  paragraph. Only spend more words when the constraint itself is genuinely
+  intricate (e.g. a cross-file gotcha), and even then trim to the minimum
+  needed to convey it.
+- Prefer a clearer name (variable/function) over a comment, whenever a name
+  can carry the same information.
+- Never narrate mechanical code (imports, simple assignments, obvious control
+  flow) or restate the function/type name in prose.
+
+```javascript
+// BAD — restates the code, one comment per line, no real information
+// Loop over all users
+for (const user of users) {
+  // Check if user is active
+  if (user.active) {
+    // Add to result
+    result.push(user);
+  }
+}
+
+// GOOD — self-explanatory, no comment needed
+const activeUsers = users.filter(user => user.active);
+```
+
+```javascript
+// BAD — verbose comment for a trivial retry
+// This function retries the operation. It will attempt to call the
+// function passed in as an argument, and if it fails, it will wait
+// and then try again, up to the maximum number of retries specified.
+function retry(fn, maxAttempts) { ... }
+
+// GOOD — short, and only states the non-obvious part (why linear backoff)
+// Linear backoff: this API rate-limits by fixed window, not burst, so
+// exponential backoff wastes time waiting past the window reset.
+function retry(fn, maxAttempts) { ... }
+```
