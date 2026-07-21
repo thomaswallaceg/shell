@@ -11,10 +11,12 @@ import "bar"
 import "panel"
 import "notifications"
 import "osd"
+import "lockscreen"
 
 Scope {
   ShellPanel {}
   Bar {}
   NotificationPopup {}
   OSD {}
+  Lockscreen {}
 }

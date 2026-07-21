@@ -1,7 +1,6 @@
 import Quickshell
 import Quickshell.Services.Greetd
 import QtQuick
-import QtQuick.Layouts
 import "."
 import "common/theme-switcher"
 import "common/panel"
@@ -99,7 +98,7 @@ FloatingWindow {
         window.backend.respond(text);
     }
 
-    onStageChanged: inputField.clear();
+    onStageChanged: authPrompt.clear();
 
     Connections {
         target: greetdMock
@@ -164,7 +163,7 @@ FloatingWindow {
     }
 
     Component.onCompleted: {
-        inputField.focusInput();
+        authPrompt.focusInput();
     }
 
     Item {
@@ -173,104 +172,18 @@ FloatingWindow {
         width: window.spansCanvas && window.activeScreen ? window.activeScreen.width : parent.width
         height: window.spansCanvas && window.activeScreen ? window.activeScreen.height : parent.height
 
-        Column {
+        AuthPrompt {
+            id: authPrompt
             anchors.centerIn: parent
-            spacing: 24
-
-            Column {
-                anchors.horizontalCenter: parent.horizontalCenter
-                spacing: 4
-
-                Text {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    text: Qt.formatDateTime(clock.date, "hh:mm")
-                    color: Theme.textPrimary
-                    font.pixelSize: 56
-                    font.family: ThemeEngine.fontFamily
-                }
-
-                Text {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    text: Qt.formatDateTime(clock.date, "ddd MMM d")
-                    color: Theme.textSecondary
-                    font.pixelSize: ThemeEngine.fontSizeLg
-                    font.family: ThemeEngine.fontFamily
-                }
-
-                SystemClock {
-                    id: clock
-                    precision: SystemClock.Seconds
-                }
-            }
-
-            Rectangle {
-                id: card
-                width: 360
-                anchors.horizontalCenter: parent.horizontalCenter
-                height: cardLayout.implicitHeight + 24
-                radius: 16
-                color: Theme.bgSurface
-                border.color: Theme.bgBorder
-                border.width: 1
-
-                Behavior on color { ColorAnimation { duration: 150 } }
-                Behavior on border.color { ColorAnimation { duration: 150 } }
-
-                ColumnLayout {
-                    id: cardLayout
-                    anchors.fill: parent
-                    anchors.margins: 12
-                    spacing: 6
-
-                    Text {
-                        Layout.fillWidth: true
-                        text: window.stage === "password" ? window.username : "Sign in"
-                        color: Theme.textPrimary
-                        font.pixelSize: ThemeEngine.fontSizeLg
-                        font.family: ThemeEngine.fontFamily
-                        font.bold: true
-                        horizontalAlignment: Text.AlignHCenter
-                    }
-
-                    PanelSearchInput {
-                        id: inputField
-                        Layout.topMargin: 6
-                        enabled: !window.waiting
-                        opacity: enabled ? 1 : 0.5
-                        busy: window.waiting
-                        placeholder: window.stage === "password" ? window.passwordMessage : "Username"
-                        accessibleName: window.stage === "password" ? window.passwordMessage : "Username"
-                        echoMode: window.stage === "password" ? TextInput.Password : TextInput.Normal
-                        selectByMouse: true
-                        onActivated: window.stage === "password" ? submitPassword(inputField.text) : submitUsername(inputField.text)
-
-                        Behavior on opacity { NumberAnimation { duration: 150 } }
-                    }
-
-                    Text {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: messageMetrics.height
-                        text: window.helpText || (window.waiting ? "Authenticating…" : "")
-                        color: window.helpTextStatus === "error" ? Theme.accentRed : Theme.textMuted
-                        elide: Text.ElideRight
-                        font.pixelSize: ThemeEngine.fontSizeSm
-                        font.family: ThemeEngine.fontFamily
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-
-                        FontMetrics {
-                            id: messageMetrics
-                            font.family: ThemeEngine.fontFamily
-                            font.pixelSize: ThemeEngine.fontSizeSm
-                        }
-                    }
-                }
-            }
-
-            PanelKeyHints {
-                anchors.horizontalCenter: parent.horizontalCenter
-                hints: [{ key: "⏎", label: window.stage === "password" ? "continue" : "next" }]
-            }
+            title: window.stage === "password" ? window.username : "Sign in"
+            placeholder: window.stage === "password" ? window.passwordMessage : "Username"
+            accessibleName: window.stage === "password" ? window.passwordMessage : "Username"
+            echoMode: window.stage === "password" ? TextInput.Password : TextInput.Normal
+            waiting: window.waiting
+            helpText: window.helpText
+            helpTextStatus: window.helpTextStatus
+            keyHints: [{ key: "⏎", label: window.stage === "password" ? "continue" : "next" }]
+            onActivated: text => window.stage === "password" ? submitPassword(text) : submitUsername(text)
         }
 
         Text {
