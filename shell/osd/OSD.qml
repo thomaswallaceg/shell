@@ -18,7 +18,6 @@ Scope {
   property real maxBrightness: 1
   property bool _brightnessReady: false
 
-  // PipeWire tracking
   PwObjectTracker {
     objects: [Pipewire.defaultAudioSink]
   }
@@ -45,7 +44,6 @@ Scope {
     onTriggered: root.showVolume = false
   }
 
-  // Brightness monitoring
   FileView {
     id: brightnessFile
     path: ""

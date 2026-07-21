@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Shapes
 import "../theme-switcher"
 
 Rectangle {
@@ -11,6 +12,9 @@ Rectangle {
     property bool selectByMouse: false
     property bool acceptTab: false
     property alias echoMode: searchField.echoMode
+    // Small spinner on the right, for callers with an async operation tied
+    // to this field's input (e.g. waiting on a search/auth response).
+    property bool busy: false
 
     signal escapePressed()
     signal navigate(int direction)
@@ -78,6 +82,48 @@ Rectangle {
                     event.accepted = true;
                     root.activated(event.modifiers);
                 }
+            }
+        }
+
+        Item {
+            id: spinner
+            visible: root.busy
+            Layout.preferredWidth: 16
+            Layout.preferredHeight: 16
+            Layout.alignment: Qt.AlignVCenter
+
+            Shape {
+                anchors.fill: parent
+                antialiasing: true
+                // The default GeometryRenderer approximates curves with line
+                // segments and relies on MSAA for smoothing, which still looks
+                // chunky at this size for a small rotating arc. CurveRenderer
+                // renders the arc analytically instead, so it stays smooth at
+                // any size/rotation without needing multisampling.
+                preferredRendererType: Shape.CurveRenderer
+
+                ShapePath {
+                    strokeWidth: 2
+                    strokeColor: Theme.textMuted
+                    fillColor: "transparent"
+                    capStyle: ShapePath.RoundCap
+
+                    PathAngleArc {
+                        centerX: spinner.width / 2
+                        centerY: spinner.height / 2
+                        radiusX: spinner.width / 2 - 1
+                        radiusY: spinner.height / 2 - 1
+                        sweepAngle: 270
+                    }
+                }
+            }
+
+            RotationAnimation on rotation {
+                running: root.busy
+                loops: Animation.Infinite
+                from: 0
+                to: 360
+                duration: 800
             }
         }
     }

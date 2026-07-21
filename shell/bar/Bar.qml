@@ -119,7 +119,6 @@ Scope {
           anchors.leftMargin: 10
           anchors.rightMargin: 10
 
-          // Left section: CPU + Temperature + Workspaces + Now Playing
           Row {
             id: leftSection
             anchors.left: parent.left
@@ -132,7 +131,6 @@ Scope {
             NowPlayingWidget {}
           }
 
-          // Center section: Window Title (truly centered in bar)
           Item {
             anchors.centerIn: parent
             height: parent.height
@@ -141,7 +139,6 @@ Scope {
             WindowTitleWidget { anchors.fill: parent }
           }
 
-          // Right section: System Tray + Volume + Brightness + Network/Battery + Time
           Row {
             id: rightSection
             anchors.right: parent.right

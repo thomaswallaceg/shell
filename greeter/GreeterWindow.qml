@@ -15,8 +15,6 @@ import "common/panel"
 FloatingWindow {
     id: window
 
-    // Command greetd should start after a successful login. Override per-machine
-    // if you don't launch niri directly (e.g. ["dbus-run-session", "niri"]).
     property var sessionCommand: ["niri-session"]
 
     implicitWidth: screen ? screen.width : 1280
@@ -24,17 +22,6 @@ FloatingWindow {
     visible: true
     color: Theme.bgBase
 
-    // Multi-monitor handling: cage (the kiosk compositor hosting this greeter)
-    // has no wlr-layer-shell support, so unlike the main shell's per-screen
-    // PanelWindows (Bar/OSD/NotificationPopup), we can't create one surface
-    // per screen here — cage only speaks xdg_shell, and forcibly maximizes
-    // that single toplevel across the bounding box of every connected output
-    // in its default "extend" mode (see cage's wiki on multi-monitor
-    // behavior). So instead: the whole window stays a flat Theme.bgBase
-    // background (which is also what any non-main screen ends up showing),
-    // and the actual login UI below is confined to the sub-rectangle
-    // matching the largest connected screen, positioned at that screen's real
-    // offset within the shared canvas.
     readonly property var screens: Quickshell.screens
     readonly property var mainScreen: {
         if (!screens || screens.length === 0)
@@ -50,26 +37,12 @@ FloatingWindow {
     readonly property int originY: screens && screens.length > 0 ? Math.min(...screens.map(s => s.y)) : 0
     readonly property real canvasWidth: screens && screens.length > 0 ? Math.max(...screens.map(s => s.x + s.width)) - originX : 0
     readonly property real canvasHeight: screens && screens.length > 0 ? Math.max(...screens.map(s => s.y + s.height)) - originY : 0
-    // Only apply the mainScreen offset math above when this window's actual
-    // surface genuinely spans that full combined canvas (cage's real
-    // behavior). Running this file windowed under a normal compositor for
-    // quick iteration (`qs -p greeter`) gives it an ordinary small
-    // FloatingWindow instead — without this check the UI would still be
-    // placed at mainScreen's absolute canvas offset, landing outside the
-    // window's actual visible area and looking like a blank window.
+
     readonly property bool spansCanvas: canvasWidth > 0 && window.width >= canvasWidth - 1 && window.height >= canvasHeight - 1
 
-    // Which screen the login UI is actually confined to right now — starts
-    // on mainScreen (the biggest one), then follows the pointer to whichever
-    // screen it moves to, mirroring lightdm's own multi-monitor behavior
-    // rather than staying pinned to one screen for the whole session.
     property var activeScreen: mainScreen
-    // Guards against the pointer's very first position update, which under
-    // Wayland reflects the cursor's pre-existing rest position at the
-    // moment this surface is created (a "pointer enter" event carrying
-    // wherever the mouse happened to already be) rather than a deliberate
-    // move by the user. Without this, the UI could start on whatever screen
-    // the mouse happened to be resting on instead of always on mainScreen.
+    // Guards against the pointer's very first position update. Without this the UI could start
+    // on whatever screen the mouse happens to be in when cage starts instead of the main screen.
     property bool pointerTrackingArmed: false
 
     HoverHandler {
@@ -95,162 +68,106 @@ FloatingWindow {
         }
     }
 
-    property string stage: "username" // username | prompt | waiting
+    property string stage: "username" // username | password
+    property bool waiting: false
     property string username: ""
-    property string promptMessage: ""
-    property bool promptSecret: true
-    property string statusMessage: ""
-    property string errorMessage: ""
+    property string passwordMessage: ""
+    property string helpText: ""
+    property string helpTextStatus: "normal" // normal | error
 
-    // Which field was on screen right before entering "waiting" — kept
-    // visible (just disabled) through the wait instead of swapping it out
-    // for the "Authenticating…" subtitle, so the card doesn't visibly lose
-    // and regain its input field for the brief gap between submitting the
-    // username and getting the password prompt back.
-    property string lastInputStage: "username"
+    readonly property QtObject backend: Greetd.available ? Greetd : greetdMock
 
-    // Dev-mode-only messages (see devMock* timers below) tend to run longer
-    // than anything real greetd/PAM ever puts in errorMessage/statusMessage,
-    // and are only ever seen while testing this file windowed — so they get
-    // their own slot outside the card entirely, rather than forcing the
-    // in-card message line to reserve space for text that's rare in
-    // practice.
-    property string devBannerMessage: ""
+    GreetdMock {
+        id: greetdMock
+    }
 
     function submitUsername(text) {
         const trimmed = text.trim();
         if (!trimmed)
             return;
         window.username = trimmed;
-        window.errorMessage = "";
-        window.statusMessage = "";
-        window.lastInputStage = "username";
-        window.stage = "waiting";
-        if (Greetd.available)
-            Greetd.createSession(trimmed);
-        else
-            devMockPasswordPrompt.start();
+        window.helpText = "";
+        window.helpTextStatus = "normal";
+        window.waiting = true;
+        window.backend.createSession(trimmed);
     }
 
-    function submitPrompt(text) {
-        // Clear any leftover error/status from a previous attempt (e.g. a
-        // prior wrong password) so it doesn't keep overriding the
-        // "Authenticating…" text below while this new attempt is pending —
-        // mirrors submitUsername's clearing above.
-        window.errorMessage = "";
-        window.statusMessage = "";
-        window.lastInputStage = "prompt";
-        window.stage = "waiting";
-        if (Greetd.available)
-            Greetd.respond(text);
-        else if (text === "oops")
-            // Dev-mode-only trigger for exercising the wrong-password path
-            // (see devMockAuthFailure below) without a real greetd socket
-            // to reject a real password against.
-            devMockAuthFailure.start();
-        else
-            devMockSignedIn.start();
+    function submitPassword(text) {
+        window.helpText = "";
+        window.helpTextStatus = "normal";
+        window.waiting = true;
+        window.backend.respond(text);
     }
 
-    // Dev-only stand-ins for the real greetd handshake, so the login flow
-    // can be exercised while testing this file windowed (`qs -p greeter`,
-    // see README) without a real greetd socket to answer createSession/
-    // respond. All gated behind !Greetd.available, which greetd itself
-    // guarantees is only ever false when there's no real session backing
-    // it — so these can't run during an actual login.
-    Timer {
-        id: devMockPasswordPrompt
-        interval: 400
-        onTriggered: {
-            window.promptMessage = "Password";
-            window.promptSecret = true;
-            window.stage = "prompt";
-        }
-    }
+    onStageChanged: inputField.clear();
 
-    // Mirrors onAuthFailure below: normalized error message, then straight
-    // back to the password prompt for the same username (real greetd
-    // retries in place too, rather than bouncing back to the username
-    // field) — type "oops" as the password to trigger this.
-    Timer {
-        id: devMockAuthFailure
-        interval: 400
-        onTriggered: {
-            window.errorMessage = "Wrong username or password";
-            window.statusMessage = "";
-            window.stage = "waiting";
-            devMockPasswordPrompt.start();
-        }
-    }
+    Connections {
+        target: greetdMock
 
-    Timer {
-        id: devMockSignedIn
-        interval: 400
-        onTriggered: {
-            window.devBannerMessage = "Signed in (dev mode — no real session launched)";
+        function onMockLaunched() {
             window.stage = "username";
+            window.waiting = false;
             window.username = "";
         }
     }
 
-    onStageChanged: {
-        if (stage === "prompt")
-            promptField.focusInput();
-        else if (stage === "username")
-            usernameField.focusInput();
-    }
-
     Connections {
-        target: Greetd
+        target: window.backend
 
-        function onAuthMessage(message, error, responseRequired, echoResponse) {
+        // Only password auth is handled here — any responseRequired prompt is
+        // assumed to be asking for the password and always masked, rather than
+        // branching on echoResponse to support other PAM prompt types.
+        function onAuthMessage(message, error, responseRequired) {
             if (responseRequired) {
-                window.promptMessage = message;
-                window.promptSecret = !echoResponse;
-                window.stage = "prompt";
-            } else if (error) {
-                window.errorMessage = message;
+                window.passwordMessage = message;
+                window.stage = "password";
+                window.waiting = false;
             } else {
-                window.statusMessage = message;
+                window.helpText = message;
+                window.helpTextStatus = error ? "error" : "normal";
             }
         }
 
         function onAuthFailure(message) {
-            // Show a normalized message rather than the raw PAM text —
-            // what the backend reports for a plain wrong username/password
-            // varies by PAM stack/config and isn't necessarily meaningful
-            // to a user (e.g. some setups surface generic-sounding text
-            // here rather than anything reading as "wrong password").
-            window.errorMessage = "Wrong username or password";
-            window.statusMessage = "";
-            // Let the user retry the same username immediately rather than
-            // bouncing back to the username field.
-            window.stage = "waiting";
-            Greetd.createSession(window.username);
+            window.helpText = "Wrong username or password";
+            window.helpTextStatus = "error";
+            window.stage = "username";
+            window.waiting = false;
+            window.username = "";
         }
 
         function onError(message) {
-            window.errorMessage = message;
-            window.statusMessage = "";
+            // Quickshell's Greetd singleton reacts to every auth_error (wrong
+            // password) by sending its own follow-up cancel_session — see
+            // GreetdConnection::onSocketReady in Quickshell's source. That
+            // races with greetd tearing down the just-failed PAM session
+            // worker and greetd frequently reports the teardown race back as
+            // a generic error whose description is an internal "unable to
+            // send message: ..." (from greetd's own worker IPC, not our
+            // connection to it — this arrives as a normal parsed IPC
+            // response, so the socket to greetd is demonstrably still up).
+            // It's not a real dropped connection, just noise that follows
+            // almost every wrong-password attempt, so it shouldn't override
+            // the real "Wrong username or password" onAuthFailure already
+            // showed for that same attempt.
+            if (message.indexOf("unable to send message") !== -1)
+                return;
+            window.helpText = message;
+            window.helpTextStatus = "error";
             window.stage = "username";
+            window.waiting = false;
         }
 
         function onReadyToLaunch() {
-            Greetd.launch(window.sessionCommand, [], true);
+            window.backend.launch(window.sessionCommand, [], true);
         }
     }
 
     Component.onCompleted: {
-        if (!Greetd.available)
-            window.devBannerMessage = "No greetd socket found — running in dev mode (fake auth, see devMock* timers above).";
-        usernameField.focusInput();
+        inputField.focusInput();
     }
 
     Item {
-        // Confine the UI to activeScreen's rectangle within the shared
-        // window (see multi-monitor/pointer-tracking comments above); any
-        // other screen is left showing plain Theme.bgBase from the root
-        // window background.
         x: window.spansCanvas && window.activeScreen ? window.activeScreen.x - window.originX : 0
         y: window.spansCanvas && window.activeScreen ? window.activeScreen.y - window.originY : 0
         width: window.spansCanvas && window.activeScreen ? window.activeScreen.width : parent.width
@@ -303,16 +220,11 @@ FloatingWindow {
                     id: cardLayout
                     anchors.fill: parent
                     anchors.margins: 12
-                    // Base gap kept small — the title and input fields add
-                    // their own extra topMargin below for more breathing
-                    // room, while the helper/message text below the active
-                    // field intentionally sits close to it (just this base
-                    // spacing, no extra margin).
                     spacing: 6
 
                     Text {
                         Layout.fillWidth: true
-                        text: window.stage === "prompt" ? window.username : "Sign in"
+                        text: window.stage === "password" ? window.username : "Sign in"
                         color: Theme.textPrimary
                         font.pixelSize: ThemeEngine.fontSizeLg
                         font.family: ThemeEngine.fontFamily
@@ -321,58 +233,25 @@ FloatingWindow {
                     }
 
                     PanelSearchInput {
-                        id: usernameField
+                        id: inputField
                         Layout.topMargin: 6
-                        visible: window.stage === "username" || (window.stage === "waiting" && window.lastInputStage === "username")
-                        enabled: window.stage !== "waiting"
+                        enabled: !window.waiting
                         opacity: enabled ? 1 : 0.5
-                        placeholder: "Username"
-                        accessibleName: "Username"
+                        busy: window.waiting
+                        placeholder: window.stage === "password" ? window.passwordMessage : "Username"
+                        accessibleName: window.stage === "password" ? window.passwordMessage : "Username"
+                        echoMode: window.stage === "password" ? TextInput.Password : TextInput.Normal
                         selectByMouse: true
-                        onActivated: submitUsername(usernameField.text)
+                        onActivated: window.stage === "password" ? submitPassword(inputField.text) : submitUsername(inputField.text)
 
                         Behavior on opacity { NumberAnimation { duration: 150 } }
                     }
 
-                    PanelSearchInput {
-                        id: promptField
-                        Layout.topMargin: 6
-                        visible: window.stage === "prompt" || (window.stage === "waiting" && window.lastInputStage === "prompt")
-                        enabled: window.stage !== "waiting"
-                        opacity: enabled ? 1 : 0.5
-                        placeholder: window.promptMessage
-                        accessibleName: window.promptMessage
-                        echoMode: window.promptSecret ? TextInput.Password : TextInput.Normal
-                        selectByMouse: true
-                        onActivated: submitPrompt(promptField.text)
-
-                        Behavior on opacity { NumberAnimation { duration: 150 } }
-                    }
-
-                    // Fixed one-line-tall slot for the error/status/
-                    // "Authenticating…" line, reserved regardless of
-                    // whether a message is showing. At most one of these is
-                    // ever relevant at a time (error takes priority since
-                    // it's the most actionable, then a real status message,
-                    // then the generic waiting indicator) — using a single
-                    // always-present element rather than three separately-
-                    // visible ones keeps the card (and the whole centered
-                    // login layout below it) from resizing/jumping as
-                    // stage/errorMessage/statusMessage change. Text that
-                    // doesn't fit on one line elides rather than wrapping —
-                    // real messages here (see onAuthFailure/onAuthMessage
-                    // above) are kept short enough not to need it; anything
-                    // longer belongs in devBannerMessage below instead.
                     Text {
                         Layout.fillWidth: true
                         Layout.preferredHeight: messageMetrics.height
-                        text: window.errorMessage || window.statusMessage || (window.stage === "waiting" ? "Authenticating…" : "")
-                        // No color Behavior here deliberately — animating
-                        // the color while text changes instantly caused a
-                        // brief mismatch (new text in the old color, or vice
-                        // versa) as they fell out of sync for the duration
-                        // of the animation.
-                        color: window.errorMessage ? Theme.accentRed : Theme.textMuted
+                        text: window.helpText || (window.waiting ? "Authenticating…" : "")
+                        color: window.helpTextStatus === "error" ? Theme.accentRed : Theme.textMuted
                         elide: Text.ElideRight
                         font.pixelSize: ThemeEngine.fontSizeSm
                         font.family: ThemeEngine.fontFamily
@@ -390,22 +269,17 @@ FloatingWindow {
 
             PanelKeyHints {
                 anchors.horizontalCenter: parent.horizontalCenter
-                hints: [{ key: "⏎", label: window.stage === "prompt" ? "continue" : "next" }]
+                hints: [{ key: "⏎", label: window.stage === "password" ? "continue" : "next" }]
             }
         }
 
-        // Dev-mode-only banner (see devBannerMessage above) — anchored to
-        // the bottom of the screen independently of the centered login
-        // Column above, so it can wrap to multiple lines without shifting
-        // the card's position, since it's rare enough not to warrant a
-        // permanently-reserved slot inside it.
         Text {
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 24
             anchors.horizontalCenter: parent.horizontalCenter
             width: Math.min(480, parent.width - 48)
-            visible: !!window.devBannerMessage
-            text: window.devBannerMessage
+            visible: !Greetd.available
+            text: "No greetd socket found — running in dev mode (fake auth, see GreetdMock.qml)."
             color: Theme.textMuted
             wrapMode: Text.WordWrap
             font.pixelSize: ThemeEngine.fontSizeSm
