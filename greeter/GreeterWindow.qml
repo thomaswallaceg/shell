@@ -290,7 +290,7 @@ FloatingWindow {
                 id: card
                 width: 360
                 anchors.horizontalCenter: parent.horizontalCenter
-                height: cardLayout.implicitHeight + 32
+                height: cardLayout.implicitHeight + 24
                 radius: 16
                 color: Theme.bgSurface
                 border.color: Theme.bgBorder
@@ -302,8 +302,13 @@ FloatingWindow {
                 ColumnLayout {
                     id: cardLayout
                     anchors.fill: parent
-                    anchors.margins: 16
-                    spacing: 12
+                    anchors.margins: 12
+                    // Base gap kept small — the title and input fields add
+                    // their own extra topMargin below for more breathing
+                    // room, while the helper/message text below the active
+                    // field intentionally sits close to it (just this base
+                    // spacing, no extra margin).
+                    spacing: 6
 
                     Text {
                         Layout.fillWidth: true
@@ -317,6 +322,7 @@ FloatingWindow {
 
                     PanelSearchInput {
                         id: usernameField
+                        Layout.topMargin: 6
                         visible: window.stage === "username" || (window.stage === "waiting" && window.lastInputStage === "username")
                         enabled: window.stage !== "waiting"
                         opacity: enabled ? 1 : 0.5
@@ -330,6 +336,7 @@ FloatingWindow {
 
                     PanelSearchInput {
                         id: promptField
+                        Layout.topMargin: 6
                         visible: window.stage === "prompt" || (window.stage === "waiting" && window.lastInputStage === "prompt")
                         enabled: window.stage !== "waiting"
                         opacity: enabled ? 1 : 0.5
