@@ -59,6 +59,42 @@ FloatingWindow {
     // window's actual visible area and looking like a blank window.
     readonly property bool spansCanvas: canvasWidth > 0 && window.width >= canvasWidth - 1 && window.height >= canvasHeight - 1
 
+    // Which screen the login UI is actually confined to right now — starts
+    // on mainScreen (the biggest one), then follows the pointer to whichever
+    // screen it moves to, mirroring lightdm's own multi-monitor behavior
+    // rather than staying pinned to one screen for the whole session.
+    property var activeScreen: mainScreen
+    // Guards against the pointer's very first position update, which under
+    // Wayland reflects the cursor's pre-existing rest position at the
+    // moment this surface is created (a "pointer enter" event carrying
+    // wherever the mouse happened to already be) rather than a deliberate
+    // move by the user. Without this, the UI could start on whatever screen
+    // the mouse happened to be resting on instead of always on mainScreen.
+    property bool pointerTrackingArmed: false
+
+    HoverHandler {
+        id: pointerTracker
+
+        onPointChanged: {
+            if (!window.pointerTrackingArmed) {
+                window.pointerTrackingArmed = true;
+                return;
+            }
+            if (!window.spansCanvas || !window.screens || window.screens.length <= 1)
+                return;
+            const gx = point.position.x + window.originX;
+            const gy = point.position.y + window.originY;
+            for (let i = 0; i < window.screens.length; i++) {
+                const s = window.screens[i];
+                if (gx >= s.x && gx < s.x + s.width && gy >= s.y && gy < s.y + s.height) {
+                    if (s !== window.activeScreen)
+                        window.activeScreen = s;
+                    break;
+                }
+            }
+        }
+    }
+
     property string stage: "username" // username | prompt | waiting
     property string username: ""
     property string promptMessage: ""
@@ -211,13 +247,14 @@ FloatingWindow {
     }
 
     Item {
-        // Confine the UI to the main screen's rectangle within the shared
-        // window (see multi-monitor comment above); any other screen is left
-        // showing plain Theme.bgBase from the root window background.
-        x: window.spansCanvas && window.mainScreen ? window.mainScreen.x - window.originX : 0
-        y: window.spansCanvas && window.mainScreen ? window.mainScreen.y - window.originY : 0
-        width: window.spansCanvas && window.mainScreen ? window.mainScreen.width : parent.width
-        height: window.spansCanvas && window.mainScreen ? window.mainScreen.height : parent.height
+        // Confine the UI to activeScreen's rectangle within the shared
+        // window (see multi-monitor/pointer-tracking comments above); any
+        // other screen is left showing plain Theme.bgBase from the root
+        // window background.
+        x: window.spansCanvas && window.activeScreen ? window.activeScreen.x - window.originX : 0
+        y: window.spansCanvas && window.activeScreen ? window.activeScreen.y - window.originY : 0
+        width: window.spansCanvas && window.activeScreen ? window.activeScreen.width : parent.width
+        height: window.spansCanvas && window.activeScreen ? window.activeScreen.height : parent.height
 
         Column {
             anchors.centerIn: parent
