@@ -307,15 +307,20 @@ Scope {
                                     opacity: 0.6
 
                                     SequentialAnimation {
+                                        id: expireAnim
                                         running: notifCard.modelData.urgency !== NotificationUrgency.Critical
+                                                 && !notifCard.modelData.closed
+                                        paused: notifCard.modelData.hovered
                                         PauseAnimation { duration: 50 }
                                         NumberAnimation {
                                             target: progressBar
                                             property: "width"
                                             to: 0
-                                            duration: notifCard.modelData.expireTimeout > 0
-                                                      ? notifCard.modelData.expireTimeout
-                                                      : notifCard.modelData.defaultTimeout  // no * 1000: matches the timer — Quickshell passes raw D-Bus ms
+                                            duration: notifCard.modelData.effectiveTimeout
+                                        }
+                                        onFinished: {
+                                            if (!notifCard.modelData.closed)
+                                                notifCard.modelData.expire();
                                         }
                                     }
                                 }

@@ -94,6 +94,9 @@ install_systemd_units() {
 deploy_greeter_files() {
     sudo mkdir -p /etc/quickshell
     sudo rsync -a --delete --verbose "$REPO_ROOT/common" "$REPO_ROOT/greeter" /etc/quickshell/
+    # Session launch needs the checkout's niri config path (greeter/ resolves
+    # ../niri only when run from the repo; the /etc deploy can't see that).
+    printf '%s\n' "$REPO_ROOT/niri/config.kdl" | sudo tee /etc/quickshell/greeter/niri-config.path >/dev/null
 }
 
 configure_greetd() {

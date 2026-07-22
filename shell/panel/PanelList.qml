@@ -27,14 +27,20 @@ ListView {
     // Don't bind currentIndex: selectedIndex — ListView writes currentIndex
     // itself when the model is filtered/diffed, which permanently breaks that
     // binding. Push the selection into currentIndex explicitly instead.
-    // callLater on count changes so we win over ListView's own post-update
-    // currentIndex adjustment.
+    // Re-assert on count changes *and* whenever ListView drifts afterward
+    // (its post-diff adjustment can run after a callLater sync, e.g. when the
+    // previously-current row is still in the filtered model and gets moved).
     function syncCurrentIndex() {
-        currentIndex = selectedIndex;
+        if (currentIndex !== selectedIndex)
+            currentIndex = selectedIndex;
     }
 
     onSelectedIndexChanged: syncCurrentIndex()
     onCountChanged: Qt.callLater(syncCurrentIndex)
+    onCurrentIndexChanged: {
+        if (currentIndex !== selectedIndex)
+            Qt.callLater(syncCurrentIndex);
+    }
 
     Component.onCompleted: applySections()
     onSectionPropertyChanged: applySections()

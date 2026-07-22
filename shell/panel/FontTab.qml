@@ -17,8 +17,8 @@ Item {
     function prepare() {
         panelTab.clearSearch();
         var idx = 0;
-        for (var i = 0; i < filteredThemes.length; i++) {
-            if (filteredThemes[i].id === ThemeEngine.currentId) {
+        for (var i = 0; i < filteredFonts.length; i++) {
+            if (filteredFonts[i].name === ThemeEngine.savedFontFamily) {
                 idx = i;
                 break;
             }
@@ -28,16 +28,20 @@ Item {
     }
 
     function clearPreview() {
-        ThemeEngine.previewId = "";
+        ThemeEngine.previewFontFamily = "";
     }
 
-    property var filteredThemes: {
-        var query = panelTab.searchText.toLowerCase();
+    property var filteredFonts: {
+        var query = panelTab.searchText.trim().toLowerCase();
+        var fonts = Qt.fontFamilies();
         var result = [];
-        for (var i = 0; i < ThemeEngine.themes.length; i++) {
-            var t = ThemeEngine.themes[i];
-            if (query === "" || t.name.toLowerCase().indexOf(query) >= 0 || t.family.toLowerCase().indexOf(query) >= 0) {
-                result.push({ data: t, id: t.id, family: t.family });
+        for (var i = 0; i < fonts.length; i++) {
+            var family = fonts[i];
+            if (query === "" || family.toLowerCase().indexOf(query) >= 0) {
+                result.push({
+                    id: "__font__" + family,
+                    name: family
+                });
             }
         }
         return result;
@@ -48,8 +52,8 @@ Item {
         function onSelectedIndexChanged() {
             if (!root.active) return;
             const idx = panelTab.selectedIndex;
-            if (idx < 0 || idx >= root.filteredThemes.length) return;
-            ThemeEngine.previewId = root.filteredThemes[idx].id;
+            if (idx < 0 || idx >= root.filteredFonts.length) return;
+            ThemeEngine.previewFontFamily = root.filteredFonts[idx].name;
         }
     }
 
@@ -57,16 +61,16 @@ Item {
         id: panelTab
         anchors.fill: parent
 
-        searchPlaceholder: "Search themes..."
-        searchAccessibleName: "Search themes"
+        searchPlaceholder: "Search fonts..."
+        searchAccessibleName: "Search fonts"
         selectByMouse: true
 
-        model: root.filteredThemes
-        sectionProperty: "family"
-        emptyText: "No themes found"
-        subtitleText: panelTab.searchText !== ""
-            ? root.filteredThemes.length + " of " + ThemeEngine.count + " themes"
-            : ThemeEngine.count + " themes — " + ThemeEngine.currentFamily + " " + ThemeEngine.currentName
+        model: root.filteredFonts
+        emptyText: "No fonts found"
+        subtitleText: {
+            const n = root.filteredFonts.length;
+            return n + " font" + (n !== 1 ? "s" : "") + " — " + ThemeEngine.fontFamily;
+        }
 
         hints: [
             { key: "↑↓", label: "navigate" },
@@ -76,9 +80,9 @@ Item {
 
         onCloseRequested: root.closeRequested()
         onActivated: {
-            if (root.filteredThemes.length > 0) {
-                ThemeEngine.previewId = "";
-                ThemeEngine.setTheme(root.filteredThemes[panelTab.selectedIndex].id);
+            if (root.filteredFonts.length > 0) {
+                ThemeEngine.previewFontFamily = "";
+                ThemeEngine.setFontFamily(root.filteredFonts[panelTab.selectedIndex].name);
                 root.closeRequested();
             }
         }
@@ -90,8 +94,8 @@ Item {
             selectedIndex: panelTab.selectedIndex
 
             onClicked: {
-                ThemeEngine.previewId = "";
-                ThemeEngine.setTheme(modelData.id);
+                ThemeEngine.previewFontFamily = "";
+                ThemeEngine.setFontFamily(modelData.name);
                 root.closeRequested();
             }
             onHovered: panelTab.selectedIndex = index
@@ -103,40 +107,16 @@ Item {
                 spacing: 10
 
                 Text {
-                    text: modelData.data.name
+                    text: modelData.name
                     color: selectedIndex === index ? Theme.textPrimary : Theme.textSecondary
                     font.pixelSize: ThemeEngine.fontSizeLg
-                    font.family: ThemeEngine.fontFamily
+                    font.family: modelData.name
                     font.bold: selectedIndex === index
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignVCenter
+                    elide: Text.ElideRight
 
                     Behavior on color { ColorAnimation { duration: 150 } }
-                }
-
-                Row {
-                    spacing: 6
-                    Layout.alignment: Qt.AlignVCenter
-
-                    Repeater {
-                        model: [
-                            modelData.data.bgBase,
-                            modelData.data.accentPrimary,
-                            modelData.data.accentGreen,
-                            modelData.data.accentOrange,
-                            modelData.data.accentRed
-                        ]
-
-                        Rectangle {
-                            required property var modelData
-                            width: 14
-                            height: 14
-                            radius: 7
-                            color: modelData
-                            border.color: Theme.bgBorder
-                            border.width: 1
-                        }
-                    }
                 }
 
                 Text {
@@ -144,7 +124,7 @@ Item {
                     color: Theme.accentGreen
                     font.pixelSize: ThemeEngine.fontSizeLg
                     font.family: ThemeEngine.fontFamily
-                    visible: ThemeEngine.currentId === modelData.id
+                    visible: ThemeEngine.savedFontFamily === modelData.name
                     Layout.alignment: Qt.AlignVCenter
 
                     Behavior on color { ColorAnimation { duration: 150 } }

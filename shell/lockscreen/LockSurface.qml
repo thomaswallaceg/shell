@@ -2,6 +2,7 @@ import Quickshell
 import QtQuick
 import "../common/theme-switcher"
 import "../common/panel"
+import "../common/osd"
 
 // Per-screen lockscreen content, displayed inside each WlSessionLockSurface
 // (see Lockscreen.qml). Same visual language as the greeter's AuthPrompt,
@@ -60,6 +61,15 @@ Rectangle {
             root.context.currentText = text;
             root.context.tryUnlock();
         }
+    }
+
+    // Layer-shell OSD is blanked while locked; render the same HUD here,
+    // only on the screen that currently shows the auth card.
+    OSDHud {
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 40
+        visible: root.active && (OSDController.showVolume || OSDController.showBrightness)
     }
 
     onActiveChanged: if (root.active) authPrompt.focusInput();

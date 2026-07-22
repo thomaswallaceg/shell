@@ -46,7 +46,7 @@ IconTextBarPill {
       const sink = Pipewire.defaultAudioSink;
       if (!sink || !sink.audio) return;
       const delta = wheel.angleDelta.y > 0 ? 0.05 : -0.05;
-      sink.audio.volume = Math.max(0, Math.min(1.5, sink.audio.volume + delta));
+      sink.audio.volume = Math.max(0, Math.min(1, sink.audio.volume + delta));
     }
   }
 }

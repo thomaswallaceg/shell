@@ -7,7 +7,7 @@ Personal [Quickshell](https://quickshell.outfoxxed.me/) desktop shell for [niri]
 | Piece | Description |
 |-------|-------------|
 | **Bar** | Top bar with CPU, temperature, niri workspaces, now playing, window title, system tray, volume, brightness, network, bluetooth, battery, and clock |
-| **Panel** | App launcher with calculator (`2+2`), run mode (`> command`), file search (`? query` or inline), and a theme browser |
+| **Panel** | App launcher with calculator (`2+2`), run mode (`> command`), file search (`? query` or inline), system actions (lock / power / media), plus theme and font browsers |
 | **Notifications** | Notification popups |
 | **OSD** | Brief volume / brightness feedback |
 | **Themes** | Large palette set with live preview and persistence |
@@ -36,6 +36,7 @@ Useful IPC (examples):
 ```bash
 qs ipc call launcher toggle
 qs ipc call theme toggle
+qs ipc call font toggle
 qs ipc call bar toggle
 qs ipc call bar peek
 ```
@@ -81,6 +82,9 @@ For Qt apps to follow qt6ct, the session needs `QT_QPA_PLATFORMTHEME=qt6ct` (e.g
 |------|----------|
 | `xdg-open` (`xdg-utils`) | Opening files / directories |
 | `fd` | File / directory search |
+| `systemctl` | Power actions (suspend / reboot / shut down) |
+| MPRIS (via Quickshell) | Play / pause / next / previous actions |
+| PipeWire (via Quickshell) | Toggle mute action |
 
 ### Lockscreen
 
@@ -103,12 +107,14 @@ For Qt apps to follow qt6ct, the session needs `QT_QPA_PLATFORMTHEME=qt6ct` (e.g
 common/                shared code (no shell.qml of its own — not runnable directly)
   theme-switcher/      ThemeEngine, palettes, themes.json
   panel/               generic UI atoms: PanelSearchInput, PanelKeyHints, PanelSubtitle, AuthPrompt
-shell/                 the main niri config (its own shell.qml)
+  osd/                 OSDController, OSDHud, OSDPill (session + lockscreen + greeter)
+niri/                  compositor config (config.kdl + includes); greeter sets NIRI_CONFIG here
+shell/                 the main Quickshell config (its own shell.qml)
   shell.qml            entrypoint
   bar/                 status bar + widgets/
-  panel/               launcher + theme tabs
+  panel/               launcher + theme + font tabs
   notifications/       notification UI + service
-  osd/                 volume / brightness OSD
+  osd/                 session layer-shell OSD window
   lockscreen/          session lock (Lockscreen, LockContext/PamContext, LockSurface)
   services/            Niri, SystemInfo, Time, Displays
   common                symlink -> ../common
@@ -129,7 +135,7 @@ install.sh             optional setup script: systemd units + greeter/greetd dep
   ```bash
   qs ipc call lockscreen lock
   ```
-  There's intentionally no matching `unlock` IPC call — the only way out is a successful PAM authentication. A niri keybind for this, and a ready-to-use `swayidle` idle timeout (lock, then power off the displays a bit later), are set up by [`./install.sh`](#setup-script-installsh)'s systemd step; wiring the keybind itself into your niri config is still a manual step, since niri's config lives outside this repo.
+  There's intentionally no matching `unlock` IPC call — the only way out is a successful PAM authentication. A niri keybind for this, and a ready-to-use `swayidle` idle timeout (lock, then power off the displays a bit later), are set up by [`./install.sh`](#setup-script-installsh)'s systemd step; wire the keybind into `niri/keybinds.kdl` if it isn't already.
 
 ## Setup script (`install.sh`)
 
@@ -145,8 +151,8 @@ Run it any time the checkout changes location (it re-renders from the templates 
 ./install.sh
 ```
 
-Two things it can't do for you, since they live outside this repo:
-- **Remove `spawn-at-startup "quickshell"` from `~/.config/niri/main.kdl`** after step 1 — leaving it in starts quickshell twice.
+Two things it can't do for you:
+- **Remove `spawn-at-startup "quickshell"` from `niri/main.kdl`** after step 1 — leaving it in starts quickshell twice.
 - **The systemd step needs `niri.service` to still pull in `graphical-session.target`** (`BindsTo=graphical-session.target` / `Before=graphical-session.target` in the packaged unit) — if you have a **full override** at `~/.config/systemd/user/niri.service` rather than a `niri.service.d/*.conf` drop-in, double check it didn't drop those lines; a full override *replaces* the packaged unit instead of merging with it.
 
 ## Greeter (greetd)
@@ -162,15 +168,16 @@ To do it by hand instead:
    ```bash
    sudo mkdir -p /etc/quickshell
    sudo rsync -a --delete common greeter /etc/quickshell/
+   printf '%s\n' "$PWD/niri/config.kdl" | sudo tee /etc/quickshell/greeter/niri-config.path
    ```
-   Re-run that same command any time `common/` or `greeter/` change to update the deployed copy.
+   Re-run that same command any time `common/` or `greeter/` change to update the deployed copy. The `niri-config.path` file tells the greeter which in-repo compositor config to hand to `niri-session` via `NIRI_CONFIG`.
 2. Install the greetd config (same contents as [`greeter/config.toml`](greeter/config.toml)):
    ```bash
    sudo cp greeter/config.toml /etc/greetd/config.toml
    ```
 3. Enable greetd: `sudo systemctl enable --now greetd`.
 
-By default the greeter launches `niri-session` on successful login (see `GreeterWindow.sessionCommand` in `greeter/GreeterWindow.qml`) — adjust if your session needs something else (e.g. `["dbus-run-session", "niri"]`).
+By default the greeter launches `niri-session` on successful login (see `GreeterWindow.sessionCommand`), with `NIRI_CONFIG` pointing at this repo's `niri/config.kdl` so the in-tree compositor config is used instead of `~/.config/niri`. `install.sh` writes that absolute path into `/etc/quickshell/greeter/niri-config.path` for the deployed greeter; a repo-local `qs -p greeter` run resolves the sibling `../niri/config.kdl` instead. Override `sessionCommand` if your session needs a different wrapper (e.g. `["dbus-run-session", "niri"]`).
 
 Caveats:
 - The greeter shares the same `ThemeEngine`/`Theme` code as the main shell, but its saved-theme state is per-config-instance — it has no access to your logged-in session's theme selection and just falls back to the first entry in `themes.json`.

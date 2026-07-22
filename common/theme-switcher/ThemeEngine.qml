@@ -10,7 +10,9 @@ import "."
 Singleton {
     id: root
 
-    property string fontFamily: "CodeNewRoman Nerd Font"
+    property string savedFontFamily: "CodeNewRoman Nerd Font"
+    property string previewFontFamily: ""
+    readonly property string fontFamily: previewFontFamily !== "" ? previewFontFamily : savedFontFamily
     readonly property int fontSizeSm:   14
     readonly property int fontSizeLg:   16
     readonly property int fontSizeIcon: 20
@@ -54,6 +56,14 @@ Singleton {
         applyColorScheme(theme);
     }
 
+    function setFontFamily(name) {
+        if (!name)
+            return;
+        previewFontFamily = "";
+        savedFontFamily = name;
+        fontConfFile.setText(name);
+    }
+
     function saveTheme(theme) {
         themeConfFile.setText(theme.id);
     }
@@ -65,6 +75,12 @@ Singleton {
             return;
         root.currentId = theme.id;
         root.applyColorScheme(theme);
+    }
+
+    function applySavedFont() {
+        const name = fontConfFile.text().trim();
+        if (name !== "")
+            root.savedFontFamily = name;
     }
 
     function applyColorScheme(theme) {
@@ -145,6 +161,12 @@ Singleton {
         id: themeConfFile
         path: root.sharedStateDir + "/theme.conf"
         onTextChanged: root.applySavedTheme()
+    }
+
+    FileView {
+        id: fontConfFile
+        path: root.sharedStateDir + "/font.conf"
+        onTextChanged: root.applySavedFont()
     }
 
     FileView {

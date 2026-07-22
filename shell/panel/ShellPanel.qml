@@ -10,9 +10,15 @@ Scope {
 
     property int currentTab: 0
 
-    readonly property string panelTitle: currentTab === 0 ? "Applications" : "Themes"
-    readonly property string switchTabIcon: currentTab === 0 ? "󰏘" : "󰀻"
-    readonly property string switchTabLabel: currentTab === 0 ? "Themes" : "Applications"
+    readonly property var tabs: [
+        { title: "Applications", icon: "󰀻", next: 1 },
+        { title: "Themes", icon: "󰏘", next: 2 },
+        { title: "Fonts", icon: "󰛖", next: 0 }
+    ]
+
+    readonly property string panelTitle: tabs[currentTab].title
+    readonly property string switchTabIcon: tabs[tabs[currentTab].next].icon
+    readonly property string switchTabLabel: tabs[tabs[currentTab].next].title
 
     IpcHandler {
         target: "launcher"
@@ -24,8 +30,14 @@ Scope {
         function toggle(): void { root.toggleTab(1); }
     }
 
+    IpcHandler {
+        target: "font"
+        function toggle(): void { root.toggleTab(2); }
+    }
+
     function closePanel() {
         themeTab.clearPreview();
+        fontTab.clearPreview();
         shellPanel.visible = false;
     }
 
@@ -33,12 +45,14 @@ Scope {
         root.currentTab = tab;
         if (tab === 0)
             launcherTab.prepare();
-        else
+        else if (tab === 1)
             themeTab.prepare();
+        else
+            fontTab.prepare();
     }
 
     function switchTab() {
-        activateTab(currentTab === 0 ? 1 : 0);
+        activateTab(tabs[currentTab].next);
     }
 
     function toggleTab(tab) {
@@ -55,6 +69,8 @@ Scope {
             return;
         if (currentTab !== 1)
             themeTab.clearPreview();
+        if (currentTab !== 2)
+            fontTab.clearPreview();
     }
 
     PanelWindow {
@@ -165,6 +181,12 @@ Scope {
                     ThemeTab {
                         id: themeTab
                         active: root.currentTab === 1 && shellPanel.visible
+                        onCloseRequested: root.closePanel()
+                    }
+
+                    FontTab {
+                        id: fontTab
+                        active: root.currentTab === 2 && shellPanel.visible
                         onCloseRequested: root.closePanel()
                     }
                 }

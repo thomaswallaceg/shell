@@ -1,6 +1,8 @@
 import Quickshell
 import Quickshell.Io
 import Quickshell.Widgets
+import Quickshell.Services.Mpris
+import Quickshell.Services.Pipewire
 import QtQuick
 import QtQuick.Layouts
 import "../common/theme-switcher"
@@ -16,10 +18,183 @@ Item {
     property bool fileSearching: false
     property int fileSearchGeneration: 0
 
+    PwObjectTracker {
+        objects: [Pipewire.defaultAudioSink]
+    }
+
+    readonly property var builtInActions: [
+        {
+            id: "__action__lock",
+            kind: "action",
+            name: "Lock",
+            genericName: "Lock the screen",
+            keywords: ["lock", "session"],
+            glyph: "󰌾",
+            action: "lock"
+        },
+        {
+            id: "__action__logout",
+            kind: "action",
+            name: "Log out",
+            genericName: "Quit niri / end session",
+            keywords: ["logout", "log out", "quit", "session"],
+            glyph: "󰍃",
+            action: "logout"
+        },
+        {
+            id: "__action__suspend",
+            kind: "action",
+            name: "Suspend",
+            genericName: "Suspend the system",
+            keywords: ["suspend", "sleep"],
+            glyph: "󰒲",
+            action: "suspend"
+        },
+        {
+            id: "__action__reboot",
+            kind: "action",
+            name: "Reboot",
+            genericName: "Restart the system",
+            keywords: ["reboot", "restart"],
+            glyph: "󰜉",
+            action: "reboot"
+        },
+        {
+            id: "__action__shutdown",
+            kind: "action",
+            name: "Shut down",
+            genericName: "Power off the system",
+            keywords: ["shutdown", "shut down", "power", "poweroff", "halt"],
+            glyph: "󰐥",
+            action: "shutdown"
+        },
+        {
+            id: "__action__playpause",
+            kind: "action",
+            name: "Play / Pause",
+            genericName: "Toggle media playback",
+            keywords: ["play", "pause", "media", "music"],
+            glyph: "󰐎",
+            action: "play-pause"
+        },
+        {
+            id: "__action__next",
+            kind: "action",
+            name: "Next track",
+            genericName: "Skip to next media track",
+            keywords: ["next", "skip", "media", "music"],
+            glyph: "󰒭",
+            action: "next"
+        },
+        {
+            id: "__action__previous",
+            kind: "action",
+            name: "Previous track",
+            genericName: "Skip to previous media track",
+            keywords: ["previous", "prev", "media", "music"],
+            glyph: "󰒮",
+            action: "previous"
+        },
+        {
+            id: "__action__mute",
+            kind: "action",
+            name: "Toggle mute",
+            genericName: "Mute or unmute volume",
+            keywords: ["mute", "volume", "audio", "sound"],
+            glyph: "󰝟",
+            action: "mute"
+        }
+    ]
+
     function prepare() {
         panelTab.clearSearch();
         panelTab.selectedIndex = -1;
         clearFileSearch();
+    }
+
+    function activeMprisPlayer() {
+        const players = Mpris.players.values;
+        if (!players || players.length === 0)
+            return null;
+        for (let i = 0; i < players.length; i++) {
+            if (players[i].playbackState === MprisPlaybackState.Playing)
+                return players[i];
+        }
+        return players[0];
+    }
+
+    function matchingActions(query) {
+        const q = query.trim().toLowerCase();
+        if (q === "")
+            return [];
+        // Same substring rules as apps — not `q.includes(k)`, which made a
+        // single letter match nearly every keyword ("session", "suspend", …).
+        return root.builtInActions.filter(a =>
+            a.name.toLowerCase().includes(q) ||
+            a.genericName.toLowerCase().includes(q) ||
+            a.keywords.some(k => k.toLowerCase().includes(q))
+        );
+    }
+
+    function rankName(name, query) {
+        const n = (name || "").toLowerCase();
+        if (n.startsWith(query))
+            return 0;
+        if (n.includes(query))
+            return 1;
+        return 2;
+    }
+
+    function compareEntries(a, b, query) {
+        const ar = root.rankName(a.name, query);
+        const br = root.rankName(b.name, query);
+        if (ar !== br)
+            return ar - br;
+        return (a.name || "").localeCompare(b.name || "");
+    }
+
+    function runAction(actionId) {
+        switch (actionId) {
+            case "lock":
+                Quickshell.execDetached(["qs", "ipc", "call", "lockscreen", "lock"]);
+                break;
+            case "logout":
+                Quickshell.execDetached(["niri", "msg", "action", "quit"]);
+                break;
+            case "suspend":
+                Quickshell.execDetached(["systemctl", "suspend"]);
+                break;
+            case "reboot":
+                Quickshell.execDetached(["systemctl", "reboot"]);
+                break;
+            case "shutdown":
+                Quickshell.execDetached(["systemctl", "poweroff"]);
+                break;
+            case "play-pause": {
+                const player = root.activeMprisPlayer();
+                if (player && player.canTogglePlaying)
+                    player.togglePlaying();
+                break;
+            }
+            case "next": {
+                const player = root.activeMprisPlayer();
+                if (player && player.canGoNext)
+                    player.next();
+                break;
+            }
+            case "previous": {
+                const player = root.activeMprisPlayer();
+                if (player && player.canGoPrevious)
+                    player.previous();
+                break;
+            }
+            case "mute": {
+                const sink = Pipewire.defaultAudioSink;
+                if (sink && sink.audio)
+                    sink.audio.muted = !sink.audio.muted;
+                break;
+            }
+        }
     }
 
     function clearFileSearch() {
@@ -181,11 +356,14 @@ Item {
         if (values.length === 0 && raw.startsWith(">"))
             return "Run command";
 
-        const apps = values.filter(e => e.kind !== "calc" && e.kind !== "run" && e.kind !== "file");
+        const apps = values.filter(e => !e.kind || e.kind === "app");
+        const actions = values.filter(e => e.kind === "action");
         const files = values.filter(e => e.kind === "file");
         const hasCalc = values.some(e => e.kind === "calc");
         const appCount = apps.length;
         let text = appCount + " application" + (appCount !== 1 ? "s" : "");
+        if (actions.length > 0)
+            text = actions.length + " action" + (actions.length !== 1 ? "s" : "") + " · " + text;
         if (hasCalc)
             text = "Calculator · " + text;
         if (root.fileSearching && fileQuery.active)
@@ -202,6 +380,8 @@ Item {
             return "run";
         if (entry?.kind === "file")
             return "open";
+        if (entry?.kind === "action")
+            return "run";
         return "launch";
     }
 
@@ -299,24 +479,32 @@ Item {
             if (q === "") {
                 apps = all.sort((a, b) => a.name.localeCompare(b.name));
             } else {
-                apps = all.filter(d =>
-                    (d.name && d.name.toLowerCase().includes(q)) ||
-                    (d.genericName && d.genericName.toLowerCase().includes(q)) ||
-                    (d.keywords && d.keywords.some(k => k.toLowerCase().includes(q))) ||
-                    (d.categories && d.categories.some(c => c.toLowerCase().includes(q)))
-                ).sort((a, b) => {
-                    const an = a.name.toLowerCase();
-                    const bn = b.name.toLowerCase();
-                    const aStarts = an.startsWith(q);
-                    const bStarts = bn.startsWith(q);
-                    if (aStarts && !bStarts) return -1;
-                    if (!aStarts && bStarts) return 1;
-                    return an.localeCompare(bn);
+                // Categories like "System" match a lone "s" and keep unrelated
+                // apps (e.g. Alacritty) in the list; only use them once the
+                // query is long enough to be intentional.
+                apps = all.filter(d => {
+                    if (d.name && d.name.toLowerCase().includes(q))
+                        return true;
+                    if (d.genericName && d.genericName.toLowerCase().includes(q))
+                        return true;
+                    if (d.keywords && d.keywords.some(k => k.toLowerCase().includes(q)))
+                        return true;
+                    if (q.length >= 3 && d.categories
+                        && d.categories.some(c => c.toLowerCase().includes(q)))
+                        return true;
+                    return false;
                 });
             }
 
             const calc = root.tryCalculate(raw);
-            let results = calc ? [calc, ...apps] : apps;
+            // Interleave actions with apps by name relevance so a single
+            // letter doesn't pin every loosely matched action above apps.
+            const actions = q === "" ? [] : root.matchingActions(raw);
+            let results = q === ""
+                ? apps
+                : [...actions, ...apps].sort((a, b) => root.compareEntries(a, b, q));
+            if (calc)
+                results = [calc, ...results];
             if (fileQuery.active && root.fileResults.length > 0)
                 results = results.concat(root.fileResults);
             return results;
@@ -346,6 +534,11 @@ Item {
             root.closeRequested();
             return;
         }
+        if (entry.kind === "action") {
+            root.runAction(entry.action);
+            root.closeRequested();
+            return;
+        }
         if (entry.kind === "file") {
             const path = openLocation
                 ? root.parentDirectory(entry.path)
@@ -362,7 +555,7 @@ Item {
         id: panelTab
         anchors.fill: parent
 
-        searchPlaceholder: "Search apps & files, ? files only, > run..."
+        searchPlaceholder: "Search apps, actions & files — ? files, > run…"
         searchAccessibleName: "Search applications"
         acceptTab: true
         clearSelectionOnEmpty: true
@@ -400,8 +593,9 @@ Item {
 
             readonly property bool isCalc: modelData.kind === "calc"
             readonly property bool isRun: modelData.kind === "run"
+            readonly property bool isAction: modelData.kind === "action"
             readonly property bool isFile: modelData.kind === "file"
-            readonly property bool isSpecial: isCalc || isRun || isFile
+            readonly property bool isSpecial: isCalc || isRun || isAction || isFile
 
             selectedIndex: panelTab.selectedIndex
             hoverHighlight: false
@@ -412,6 +606,9 @@ Item {
                     return "Calculation result " + (modelData.result ?? "");
                 if (isRun)
                     return "Run command " + (modelData.command ?? "");
+                if (isAction)
+                    return (modelData.name ?? "Action")
+                        + (modelData.genericName ? " - " + modelData.genericName : "");
                 if (isFile)
                     return (modelData.isDir ? "Open folder " : "Open file ") + (modelData.path ?? "");
                 return (modelData.name ?? "Application")
@@ -434,7 +631,15 @@ Item {
 
                     Text {
                         anchors.centerIn: parent
-                        text: isFile ? (modelData.isDir ? "󰉋" : "󰈔") : (isRun ? "󰆍" : "󰃬")
+                        text: {
+                            if (isFile)
+                                return modelData.isDir ? "󰉋" : "󰈔";
+                            if (isAction)
+                                return modelData.glyph ?? "󰘳";
+                            if (isRun)
+                                return "󰆍";
+                            return "󰃬";
+                        }
                         color: selectedIndex === index ? Theme.accentPrimary : Theme.textSecondary
                         font.pixelSize: ThemeEngine.fontSizeIcon
                         font.family: ThemeEngine.fontFamily

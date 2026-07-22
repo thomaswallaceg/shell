@@ -1,9 +1,11 @@
 import Quickshell
+import Quickshell.Io
 import Quickshell.Services.Greetd
 import QtQuick
 import "."
 import "common/theme-switcher"
 import "common/panel"
+import "common/osd"
 
 // Fullscreen login window. Meant to run standalone inside a minimal kiosk
 // compositor (cage) launched by greetd — see README.md for the greetd/cage
@@ -15,6 +17,25 @@ FloatingWindow {
     id: window
 
     property var sessionCommand: ["niri-session"]
+    // Absolute path to this checkout's niri/config.kdl, passed as NIRI_CONFIG
+    // so niri-session → niri.service uses it instead of ~/.config/niri.
+    // Prefer greeter/niri-config.path (written by install.sh into the
+    // /etc/quickshell deploy). shellPath("../niri/...") is only safe as a
+    // fallback when the greeter itself is running from the repo — under
+    // /etc/quickshell that path resolves to a non-existent sibling.
+    readonly property string niriConfig: {
+        const fromDeploy = niriConfigPathFile.text().trim();
+        if (fromDeploy !== "")
+            return fromDeploy;
+        if (!Quickshell.shellDir.startsWith("/etc/"))
+            return Quickshell.shellPath("../niri/config.kdl");
+        return "";
+    }
+
+    FileView {
+        id: niriConfigPathFile
+        path: Quickshell.shellPath("niri-config.path")
+    }
 
     implicitWidth: screen ? screen.width : 1280
     implicitHeight: screen ? screen.height : 720
@@ -158,7 +179,10 @@ FloatingWindow {
         }
 
         function onReadyToLaunch() {
-            window.backend.launch(window.sessionCommand, [], true);
+            const env = [];
+            if (window.niriConfig !== "")
+                env.push("NIRI_CONFIG=" + window.niriConfig);
+            window.backend.launch(window.sessionCommand, env, true);
         }
     }
 
@@ -184,6 +208,14 @@ FloatingWindow {
             helpTextStatus: window.helpTextStatus
             keyHints: [{ key: "⏎", label: window.stage === "password" ? "continue" : "next" }]
             onActivated: text => window.stage === "password" ? submitPassword(text) : submitUsername(text)
+        }
+
+        // Same active-screen Item as the auth card, so the OSD follows it.
+        OSDHud {
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 40
+            visible: OSDController.showVolume || OSDController.showBrightness
         }
 
         Text {

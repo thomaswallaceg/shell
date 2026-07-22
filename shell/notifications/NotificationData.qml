@@ -1,8 +1,14 @@
 import QtQuick
 import Quickshell.Services.Notifications
 
-QtObject {
+// Invisible host for per-notification state + expire timer. Item (not QtObject)
+// so the Timer is reliably driven by the QML engine.
+Item {
     id: notificationData
+
+    width: 0
+    height: 0
+    visible: false
 
     property Notification notification: null
     property bool closed: false
@@ -21,9 +27,13 @@ QtObject {
 
     property bool hovered: false
 
-    readonly property int defaultTimeout: 5000  // ms — fallback auto-dismiss when app sends -1/0
+    readonly property int defaultTimeout: 5000
 
-    readonly property Connections _conn: Connections {
+    // Quickshell exposes the freestanding D-Bus expire_timeout (milliseconds).
+    // Values <= 0 mean "server decides" — use our default.
+    readonly property int effectiveTimeout: expireTimeout > 0 ? Math.round(expireTimeout) : defaultTimeout
+
+    Connections {
         target: notificationData.notification
 
         function onClosed(): void {
@@ -52,7 +62,9 @@ QtObject {
             if (notificationData.notification) notificationData.urgency = notificationData.notification.urgency;
         }
         function onExpireTimeoutChanged(): void {
-            if (notificationData.notification) notificationData.expireTimeout = notificationData.notification.expireTimeout;
+            if (!notificationData.notification) return;
+            const raw = notificationData.notification.expireTimeout;
+            notificationData.expireTimeout = raw > 0 ? raw : notificationData.defaultTimeout;
         }
         function onActionsChanged(): void {
             if (!notificationData.notification) return;
@@ -62,14 +74,14 @@ QtObject {
         }
     }
 
-    readonly property Timer _timer: Timer {
+    Timer {
+        id: expireTimer
+        interval: notificationData.effectiveTimeout
+        repeat: false
         running: !notificationData.closed
                  && !notificationData.hovered
                  && notificationData.urgency !== NotificationUrgency.Critical
-        interval: notificationData.expireTimeout > 0 ? notificationData.expireTimeout : notificationData.defaultTimeout  // no * 1000: Quickshell passes raw D-Bus ms, not seconds
-        onTriggered: {
-            notificationData.dismiss()
-        }
+        onTriggered: notificationData.expire()
     }
 
     Component.onCompleted: {
@@ -87,6 +99,14 @@ QtObject {
         actions   = notification.actions.map(function(a) {
             return { identifier: a.identifier, text: a.text };
         });
+    }
+
+    function expire(): void {
+        if (closed) return;
+        closed = true;
+        NotificationService._remove(notificationData);
+        if (notification) try { notification.expire(); } catch(e) {}
+        destroy();
     }
 
     function dismiss(): void {

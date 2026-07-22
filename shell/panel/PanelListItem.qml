@@ -34,6 +34,9 @@ Rectangle {
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         onClicked: root.clicked()
-        onEntered: root.hovered()
+        // positionChanged (not entered): recreating delegates under a
+        // stationary cursor after a filter must not steal the selection
+        // that onTextEdited just reset to 0.
+        onPositionChanged: root.hovered()
     }
 }

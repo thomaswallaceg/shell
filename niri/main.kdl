@@ -1,0 +1,18 @@
+include "keybinds.kdl"
+include "peripherals.kdl"
+include "windows.kdl"
+include "outputs.kdl"
+
+environment {
+    QS_CONFIG_PATH "/home/thomas/projects/quickshell/shell"
+}
+
+screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
+
+layout {
+    background-color "#000000"
+}
+
+debug {
+    honor-xdg-activation-with-invalid-serial
+}
