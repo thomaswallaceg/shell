@@ -7,3 +7,5 @@
 *.qmlc
 *.jsc
 .qml-cache/
+
+todo.txt
