@@ -152,6 +152,7 @@ Scope {
             BluetoothWidget {}
             BatteryWidget {}
             TimeWidget {}
+            PowerWidget {}
           }
         }
       }

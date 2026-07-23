@@ -3,6 +3,7 @@ import QtQuick
 import "../common/theme-switcher"
 import "../common/panel"
 import "../common/osd"
+import "../common/widgets"
 
 // Per-screen lockscreen content, displayed inside each WlSessionLockSurface
 // (see Lockscreen.qml). Same visual language as the greeter's AuthPrompt,
@@ -60,6 +61,39 @@ Rectangle {
         onActivated: text => {
             root.context.currentText = text;
             root.context.tryUnlock();
+        }
+    }
+
+    // Fullscreen host so the in-surface power menu can paint below the pills
+    // without being trapped in a barHeight-tall item. Above AuthPrompt so the
+    // dropdown isn't covered by the card. PopupWindow can't map here
+    // (ext_session_lock_v1 = one surface per output).
+    Item {
+        id: topChrome
+        anchors.fill: parent
+        visible: root.active
+        z: 10
+
+        MouseArea {
+            anchors.fill: parent
+            enabled: powerWidget.menuOpen
+            onClicked: powerWidget.closeMenu()
+        }
+
+        Row {
+            anchors.top: parent.top
+            anchors.right: parent.right
+            anchors.topMargin: Math.round((ThemeEngine.barHeight - 24) / 2)
+            anchors.rightMargin: 10
+            spacing: 8
+
+            VolumeWidget {}
+            PowerWidget {
+                id: powerWidget
+                showSessionActions: false
+                inlineMenu: true
+                inlineMenuHost: topChrome
+            }
         }
     }
 

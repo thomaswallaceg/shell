@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell.Networking
 import "../../services"
 import "../../common/theme-switcher"
+import "../../common/widgets"
 
 IconTextBarPill {
   readonly property var activeConnection: {

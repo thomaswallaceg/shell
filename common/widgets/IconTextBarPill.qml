@@ -1,5 +1,5 @@
 import QtQuick
-import "../../common/theme-switcher"
+import "../theme-switcher"
 
 // The common case: a BarPill showing an icon and/or a label side by side.
 // Used by the simple status indicators (CPU, temperature, network, battery,

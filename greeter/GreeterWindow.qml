@@ -6,6 +6,7 @@ import "."
 import "common/theme-switcher"
 import "common/panel"
 import "common/osd"
+import "common/widgets"
 
 // Fullscreen login window. Meant to run standalone inside a minimal kiosk
 // compositor (cage) launched by greetd — see README.md for the greetd/cage
@@ -208,6 +209,36 @@ FloatingWindow {
             helpTextStatus: window.helpTextStatus
             keyHints: [{ key: "⏎", label: window.stage === "password" ? "continue" : "next" }]
             onActivated: text => window.stage === "password" ? submitPassword(text) : submitUsername(text)
+        }
+
+        // Same placement as the session bar's right section. Fullscreen host
+        // so the in-surface power menu can paint below the pills.
+        Item {
+            id: topChrome
+            anchors.fill: parent
+            z: 10
+
+            MouseArea {
+                anchors.fill: parent
+                enabled: powerWidget.menuOpen
+                onClicked: powerWidget.closeMenu()
+            }
+
+            Row {
+                anchors.top: parent.top
+                anchors.right: parent.right
+                anchors.topMargin: Math.round((ThemeEngine.barHeight - 24) / 2)
+                anchors.rightMargin: 10
+                spacing: 8
+
+                VolumeWidget {}
+                PowerWidget {
+                    id: powerWidget
+                    showSessionActions: false
+                    inlineMenu: true
+                    inlineMenuHost: topChrome
+                }
+            }
         }
 
         // Same active-screen Item as the auth card, so the OSD follows it.

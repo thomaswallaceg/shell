@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Widgets
 import Quickshell.Services.SystemTray
+import "../../common/widgets"
 
 // There's an issue where some tray icons don't display correctly:
 // https://github.com/quickshell-mirror/quickshell/issues/26

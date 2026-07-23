@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell.Io
 import "../../common/theme-switcher"
+import "../../common/widgets"
 
 IconTextBarPill {
   id: pill

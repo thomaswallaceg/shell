@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell.Services.Mpris
 import "../../common/theme-switcher"
+import "../../common/widgets"
 
 BarPill {
   id: root

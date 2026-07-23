@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import "../../services"
 import "../../common/theme-switcher"
+import "../../common/widgets"
 
 // One pill per connected monitor, each containing a dot per workspace on that
 // output — the active workspace's dot is enlarged, and the pill itself is

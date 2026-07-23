@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell.Services.UPower
 import "../../common/theme-switcher"
+import "../../common/widgets"
 
 IconTextBarPill {
   readonly property var battery: UPower.displayDevice

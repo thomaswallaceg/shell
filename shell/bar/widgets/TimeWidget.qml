@@ -1,6 +1,7 @@
 import QtQuick
 import "../../services"
 import "../../common/theme-switcher"
+import "../../common/widgets"
 
 BarPill {
   id: pill
