@@ -2,11 +2,17 @@
 # One-time (re-runnable) setup for this repo's optional machine integrations:
 #
 #   Step 0: report which of the project's CLI dependencies are installed
-#   Step 1: systemd user services for quickshell + swayidle (systemd/*.service)
-#   Step 2: greetd + cage, so greeter/ becomes the login screen
+#   Step 1: symlink ~/.config/niri -> this checkout's niri/ for the current user
+#   Step 2: systemd user services for quickshell + swayidle (systemd/*.service)
+#   Step 3: greetd + cage, so greeter/ becomes the login screen
 #
-# Missing tools are reported in Step 0; Steps 1–2 just run their commands
+# Missing tools are reported in Step 0; Steps 1–3 just run their commands
 # and rely on `set -e` to fail loudly if something required isn't there.
+#
+# Step 1 is per-user by design: run this script as each user who should log
+# into niri via this repo's config, so multiple accounts on the same machine
+# (or sharing one greeter) each get their own ~/.config/niri symlink rather
+# than depending on a single machine-wide config path.
 
 # stop on the first failing command (-e)
 # treat using an unset variable as an error (-u)
@@ -46,11 +52,12 @@ check_dependencies() {
         "minical|Bar clock click-through"
         "xdg-open|Launcher file/directory opening"
         "fd|Launcher file search"
-        "swayidle|Lockscreen idle timeout (this script's Step 1)"
-        "systemctl|systemd user units (this script's Step 1)"
-        "rsync|Greeter file deployment (this script's Step 2)"
-        "greetd|Greeter login backend (this script's Step 2)"
-        "cage|Greeter kiosk compositor (this script's Step 2)"
+        "swayidle|Lockscreen idle timeout (this script's Step 2)"
+        "systemctl|systemd user units (this script's Step 2) + power actions"
+        "systemd-inhibit|Power menu reboot/shutdown inhibitor check"
+        "rsync|Greeter file deployment (this script's Step 3)"
+        "greetd|Greeter login backend (this script's Step 3)"
+        "cage|Greeter kiosk compositor (this script's Step 3)"
     )
 
     local missing=()
@@ -71,7 +78,46 @@ check_dependencies() {
     fi
 }
 
-# --- Step 1: systemd user units for quickshell + swayidle ------------------
+# --- Step 1: symlink ~/.config/niri to this checkout's niri/ ---------------
+
+# niri resolves its config from ~/.config/niri/config.kdl for whatever user
+# actually launches it — true whether that's this login shell, a TTY `niri`,
+# or niri-session launched post-auth by the greeter. Symlinking there instead
+# of overriding NIRI_CONFIG per launch path means every one of those paths
+# picks up this checkout's config with zero extra plumbing, and each user on
+# a shared machine gets their own independent symlink.
+link_niri_config() {
+    local target="${XDG_CONFIG_HOME:-$HOME/.config}/niri"
+    local link_target="$REPO_ROOT/niri"
+
+    if [ -L "$target" ]; then
+        if [ "$(readlink -f "$target")" = "$(readlink -f "$link_target")" ]; then
+            return
+        fi
+        warn "$target is a symlink pointing elsewhere; relinking to $link_target."
+        rm "$target"
+    elif [ -e "$target" ]; then
+        warn "$target already exists and is not a symlink."
+        local reply
+        read -r -p "Back it up to $target.bak and replace with a symlink to $link_target? [y/N] " reply </dev/tty
+        case "$reply" in
+            y|Y|yes|YES)
+                rm -rf "$target.bak"
+                mv "$target" "$target.bak"
+                ;;
+            *)
+                warn "Skipping niri config symlink."
+                return
+                ;;
+        esac
+    fi
+
+    mkdir -p "$(dirname "$target")"
+    ln -s "$link_target" "$target"
+    echo "Linked $target -> $link_target"
+}
+
+# --- Step 2: systemd user units for quickshell + swayidle ------------------
 
 install_systemd_units() {
     local shell_path="$REPO_ROOT/shell"
@@ -89,14 +135,11 @@ install_systemd_units() {
     systemctl --user add-wants niri.service "${units[@]}"
 }
 
-# --- Step 2: greeter (greetd + cage) ----------------------------------------
+# --- Step 3: greeter (greetd + cage) ----------------------------------------
 
 deploy_greeter_files() {
     sudo mkdir -p /etc/quickshell
     sudo rsync -a --delete --verbose "$REPO_ROOT/common" "$REPO_ROOT/greeter" /etc/quickshell/
-    # Session launch needs the checkout's niri config path (greeter/ resolves
-    # ../niri only when run from the repo; the /etc deploy can't see that).
-    printf '%s\n' "$REPO_ROOT/niri/config.kdl" | sudo tee /etc/quickshell/greeter/niri-config.path >/dev/null
 }
 
 configure_greetd() {
@@ -135,6 +178,7 @@ setup_greeter() {
 
 main() {
     check_dependencies
+    link_niri_config
     install_systemd_units
     setup_greeter
 }

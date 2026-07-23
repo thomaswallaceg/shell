@@ -7,6 +7,7 @@ import "common/theme-switcher"
 import "common/panel"
 import "common/osd"
 import "common/widgets"
+import "common/power"
 
 // Fullscreen login window. Meant to run standalone inside a minimal kiosk
 // compositor (cage) launched by greetd — see README.md for the greetd/cage
@@ -17,26 +18,11 @@ import "common/widgets"
 FloatingWindow {
     id: window
 
+    // niri resolves its own config from ~/.config/niri/config.kdl for
+    // whichever user this session launches as, so this just needs to be a
+    // symlink to this repo's niri/ (see install.sh's link_niri_config, or
+    // README.md's manual setup) — no NIRI_CONFIG plumbing needed here.
     property var sessionCommand: ["niri-session"]
-    // Absolute path to this checkout's niri/config.kdl, passed as NIRI_CONFIG
-    // so niri-session → niri.service uses it instead of ~/.config/niri.
-    // Prefer greeter/niri-config.path (written by install.sh into the
-    // /etc/quickshell deploy). shellPath("../niri/...") is only safe as a
-    // fallback when the greeter itself is running from the repo — under
-    // /etc/quickshell that path resolves to a non-existent sibling.
-    readonly property string niriConfig: {
-        const fromDeploy = niriConfigPathFile.text().trim();
-        if (fromDeploy !== "")
-            return fromDeploy;
-        if (!Quickshell.shellDir.startsWith("/etc/"))
-            return Quickshell.shellPath("../niri/config.kdl");
-        return "";
-    }
-
-    FileView {
-        id: niriConfigPathFile
-        path: Quickshell.shellPath("niri-config.path")
-    }
 
     implicitWidth: screen ? screen.width : 1280
     implicitHeight: screen ? screen.height : 720
@@ -180,10 +166,7 @@ FloatingWindow {
         }
 
         function onReadyToLaunch() {
-            const env = [];
-            if (window.niriConfig !== "")
-                env.push("NIRI_CONFIG=" + window.niriConfig);
-            window.backend.launch(window.sessionCommand, env, true);
+            window.backend.launch(window.sessionCommand, [], true);
         }
     }
 
@@ -238,6 +221,10 @@ FloatingWindow {
                     inlineMenu: true
                     inlineMenuHost: topChrome
                 }
+            }
+
+            PowerConfirmDialog {
+                anchors.fill: parent
             }
         }
 

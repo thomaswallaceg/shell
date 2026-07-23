@@ -7,8 +7,4 @@
 *.qmlc
 *.jsc
 .qml-cache/
-
-# Written by install.sh into the /etc/quickshell deploy only
-greeter/niri-config.path
-
 todo.txt

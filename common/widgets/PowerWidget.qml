@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import "../theme-switcher"
+import "../power"
 
 IconTextBarPill {
   id: pill
@@ -35,23 +36,7 @@ IconTextBarPill {
   }
 
   function runAction(action) {
-    switch (action) {
-      case "lock":
-        Quickshell.execDetached(["qs", "ipc", "call", "lockscreen", "lock"]);
-        break;
-      case "suspend":
-        Quickshell.execDetached(["systemctl", "suspend"]);
-        break;
-      case "reboot":
-        Quickshell.execDetached(["systemctl", "reboot"]);
-        break;
-      case "shutdown":
-        Quickshell.execDetached(["systemctl", "poweroff"]);
-        break;
-      case "logout":
-        Quickshell.execDetached(["niri", "msg", "action", "quit"]);
-        break;
-    }
+    PowerController.request(action);
   }
 
   function closeMenu() { menuOpen = false; }

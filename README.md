@@ -83,6 +83,7 @@ For Qt apps to follow qt6ct, the session needs `QT_QPA_PLATFORMTHEME=qt6ct` (e.g
 | `xdg-open` (`xdg-utils`) | Opening files / directories |
 | `fd` | File / directory search |
 | `systemctl` | Power actions (suspend / reboot / shut down) |
+| `systemd-inhibit` | Reboot/shutdown confirm when apps hold logind inhibitors |
 | MPRIS (via Quickshell) | Play / pause / next / previous actions |
 | PipeWire (via Quickshell) | Toggle mute action |
 
@@ -108,7 +109,7 @@ common/                shared code (no shell.qml of its own — not runnable dir
   theme-switcher/      ThemeEngine, palettes, themes.json
   panel/               generic UI atoms: PanelSearchInput, PanelKeyHints, PanelSubtitle, AuthPrompt
   osd/                 OSDController, OSDHud, OSDPill (session + lockscreen + greeter)
-niri/                  compositor config (config.kdl + includes); greeter sets NIRI_CONFIG here
+niri/                  compositor config (config.kdl + includes); symlinked from ~/.config/niri
 shell/                 the main Quickshell config (its own shell.qml)
   shell.qml            entrypoint
   bar/                 status bar + widgets/
@@ -141,9 +142,10 @@ install.sh             optional setup script: systemd units + greeter/greetd dep
 
 `./install.sh` automates the machine-level integrations below:
 
-- **Step 0 — dependency check**: reports which of the project's CLI tools are on `PATH` (`[ok]` / `[missing]`), mirroring the tools the QML actually invokes (`brightnessctl`, `fd`, `wlctl`, …) plus this script's own helpers (`systemctl`, `rsync`, `swayidle`, `greetd`, `cage`, …). Non-fatal — most are per-widget/feature. Stacks consumed only via Quickshell modules (NetworkManager, UPower, PipeWire, BlueZ, PAM) are listed in the tables above, not here. Steps 1–2 do not re-check these; a missing required tool just fails the command under `set -e`.
-- **Step 1 — systemd units**: renders `systemd/quickshell.service` and `systemd/swayidle.service` (filling in this checkout's actual path, since niri's own `environment {}` block in `main.kdl` only reaches processes niri spawns directly, not independently-started systemd units) into `~/.config/systemd/user/`, then `daemon-reload`s and wires them to start alongside `niri.service`. This runs quickshell and the lockscreen's idle daemon (`swayidle`) as systemd **user** services tied to `graphical-session.target` instead of niri's own `spawn-at-startup` — you get `Restart=on-failure` and `systemctl --user status/restart/...` for both, at the cost of this one setup step per machine.
-- **Step 2 — greeter deployment**: deploys `common/` + `greeter/` to `/etc/quickshell/` (readable by the `greeter` system user, which usually can't see your home directory), installs [`greeter/config.toml`](greeter/config.toml) to `/etc/greetd/config.toml` (prompts to overwrite or skip if that file already exists), and enables `greetd`.
+- **Step 0 — dependency check**: reports which of the project's CLI tools are on `PATH` (`[ok]` / `[missing]`), mirroring the tools the QML actually invokes (`brightnessctl`, `fd`, `wlctl`, …) plus this script's own helpers (`systemctl`, `rsync`, `swayidle`, `greetd`, `cage`, …). Non-fatal — most are per-widget/feature. Stacks consumed only via Quickshell modules (NetworkManager, UPower, PipeWire, BlueZ, PAM) are listed in the tables above, not here. Steps 1–3 do not re-check these; a missing required tool just fails the command under `set -e`.
+- **Step 1 — niri config symlink**: symlinks `~/.config/niri` to this checkout's `niri/` for the *current* user (backing up any pre-existing real directory first, after confirming). Run the script as each user who should log into niri via this repo's config — it's deliberately per-user rather than a single machine-wide path, so multiple accounts on one machine (including one shared by a single greeter) each resolve their own `~/.config/niri` independently.
+- **Step 2 — systemd units**: renders `systemd/quickshell.service` and `systemd/swayidle.service` (filling in this checkout's actual path, since niri's own `environment {}` block in `main.kdl` only reaches processes niri spawns directly, not independently-started systemd units) into `~/.config/systemd/user/`, then `daemon-reload`s and wires them to start alongside `niri.service`. This runs quickshell and the lockscreen's idle daemon (`swayidle`) as systemd **user** services tied to `graphical-session.target` instead of niri's own `spawn-at-startup` — you get `Restart=on-failure` and `systemctl --user status/restart/...` for both, at the cost of this one setup step per machine.
+- **Step 3 — greeter deployment**: deploys `common/` + `greeter/` to `/etc/quickshell/` (readable by the `greeter` system user, which usually can't see your home directory), installs [`greeter/config.toml`](greeter/config.toml) to `/etc/greetd/config.toml` (prompts to overwrite or skip if that file already exists), and enables `greetd`.
 
 Run it any time the checkout changes location (it re-renders from the templates rather than editing the installed copies), from the repo root:
 
@@ -152,7 +154,7 @@ Run it any time the checkout changes location (it re-renders from the templates 
 ```
 
 Two things it can't do for you:
-- **Remove `spawn-at-startup "quickshell"` from `niri/main.kdl`** after step 1 — leaving it in starts quickshell twice.
+- **Remove `spawn-at-startup "quickshell"` from `niri/main.kdl`** after step 2 — leaving it in starts quickshell twice.
 - **The systemd step needs `niri.service` to still pull in `graphical-session.target`** (`BindsTo=graphical-session.target` / `Before=graphical-session.target` in the packaged unit) — if you have a **full override** at `~/.config/systemd/user/niri.service` rather than a `niri.service.d/*.conf` drop-in, double check it didn't drop those lines; a full override *replaces* the packaged unit instead of merging with it.
 
 ## Greeter (greetd)
@@ -161,23 +163,26 @@ Two things it can't do for you:
 
 ### Setup
 
-Install `greetd` and a minimal kiosk Wayland compositor to host the greeter, e.g. [cage](https://github.com/cage-kiosk/cage), then run [`./install.sh`](#setup-script-installsh) — its "greeter deployment" step does the rest (deploying `common/` + `greeter/` to `/etc/quickshell/`, writing `/etc/greetd/config.toml`, enabling `greetd`).
+Install `greetd` and a minimal kiosk Wayland compositor to host the greeter, e.g. [cage](https://github.com/cage-kiosk/cage), then run [`./install.sh`](#setup-script-installsh) as **each user** who should be able to log in this way — its niri-symlink step (1) and greeter deployment step (3) both need to run per-user/per-machine respectively; see below.
 
 To do it by hand instead:
-1. Deploy `common/` and `greeter/` as siblings somewhere the greeter's system user (commonly `greeter`) can read — it doesn't need the rest of this repo. `rsync -a` preserves the relative symlink between them as long as they stay siblings, and `--delete` keeps re-syncing after future edits clean (removes anything at the destination no longer in the source):
+1. Symlink `~/.config/niri` to this repo's `niri/` for each user who logs in via this greeter (this is what makes login work for more than one account — see the note below):
+   ```bash
+   ln -s "$PWD/niri" ~/.config/niri
+   ```
+2. Deploy `common/` and `greeter/` as siblings somewhere the greeter's system user (commonly `greeter`) can read — it doesn't need the rest of this repo. `rsync -a` preserves the relative symlink between them as long as they stay siblings, and `--delete` keeps re-syncing after future edits clean (removes anything at the destination no longer in the source):
    ```bash
    sudo mkdir -p /etc/quickshell
    sudo rsync -a --delete common greeter /etc/quickshell/
-   printf '%s\n' "$PWD/niri/config.kdl" | sudo tee /etc/quickshell/greeter/niri-config.path
    ```
-   Re-run that same command any time `common/` or `greeter/` change to update the deployed copy. The `niri-config.path` file tells the greeter which in-repo compositor config to hand to `niri-session` via `NIRI_CONFIG`.
-2. Install the greetd config (same contents as [`greeter/config.toml`](greeter/config.toml)):
+   Re-run this any time `common/` or `greeter/` change.
+3. Install the greetd config (same contents as [`greeter/config.toml`](greeter/config.toml)):
    ```bash
    sudo cp greeter/config.toml /etc/greetd/config.toml
    ```
-3. Enable greetd: `sudo systemctl enable --now greetd`.
+4. Enable greetd: `sudo systemctl enable --now greetd`.
 
-By default the greeter launches `niri-session` on successful login (see `GreeterWindow.sessionCommand`), with `NIRI_CONFIG` pointing at this repo's `niri/config.kdl` so the in-tree compositor config is used instead of `~/.config/niri`. `install.sh` writes that absolute path into `/etc/quickshell/greeter/niri-config.path` for the deployed greeter; a repo-local `qs -p greeter` run resolves the sibling `../niri/config.kdl` instead. Override `sessionCommand` if your session needs a different wrapper (e.g. `["dbus-run-session", "niri"]`).
+By default the greeter launches `niri-session` on successful login (see `GreeterWindow.sessionCommand`). It doesn't pass niri any explicit config path — niri resolves `~/.config/niri/config.kdl` on its own for whichever user `niri-session` actually launches as, so step 1's symlink is what makes it pick up this repo's config instead of creating a fresh default. This is also what makes the greeter safe to share across multiple user accounts on one machine: each user's symlink is independent, so there's no single machine-wide config path to collide on. Override `sessionCommand` if your session needs a different wrapper (e.g. `["dbus-run-session", "niri"]`).
 
 Caveats:
 - The greeter shares the same `ThemeEngine`/`Theme` code as the main shell, but its saved-theme state is per-config-instance — it has no access to your logged-in session's theme selection and just falls back to the first entry in `themes.json`.

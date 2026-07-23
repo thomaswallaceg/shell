@@ -6,6 +6,7 @@ import Quickshell.Services.Pipewire
 import QtQuick
 import QtQuick.Layouts
 import "../common/theme-switcher"
+import "../common/power"
 
 Item {
     id: root
@@ -162,13 +163,13 @@ Item {
                 Quickshell.execDetached(["niri", "msg", "action", "quit"]);
                 break;
             case "suspend":
-                Quickshell.execDetached(["systemctl", "suspend"]);
+                PowerController.request("suspend");
                 break;
             case "reboot":
-                Quickshell.execDetached(["systemctl", "reboot"]);
+                PowerController.request("reboot");
                 break;
             case "shutdown":
-                Quickshell.execDetached(["systemctl", "poweroff"]);
+                PowerController.request("shutdown");
                 break;
             case "play-pause": {
                 const player = root.activeMprisPlayer();
