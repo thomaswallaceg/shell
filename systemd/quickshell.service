@@ -5,10 +5,10 @@ After=graphical-session.target
 Requisite=graphical-session.target
 
 [Service]
-# QS_CONFIG_PATH is rendered in by install.sh — niri's own `environment {}`
-# block only reaches processes niri spawns directly, not independently
-# started systemd units, so this can't just be inherited from niri.kdl.
-Environment=QS_CONFIG_PATH=@QUICKSHELL_SHELL_PATH@
+# Path comes from %E/quickshell/session.env (written by install.sh). niri's
+# own `environment {}` block only reaches processes niri spawns directly, not
+# independently started systemd units, so this can't just be inherited.
+EnvironmentFile=%E/quickshell/session.env
 ExecStart=/usr/bin/quickshell
 Restart=on-failure
 RestartSec=1

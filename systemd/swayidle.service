@@ -7,7 +7,7 @@ Requisite=graphical-session.target
 [Service]
 # Needed so the `qs ipc call ...` commands below resolve to the running
 # quickshell instance — see the comment in quickshell.service.
-Environment=QS_CONFIG_PATH=@QUICKSHELL_SHELL_PATH@
+EnvironmentFile=%E/quickshell/session.env
 ExecStart=/usr/bin/swayidle -w \
     timeout 300 '/usr/bin/qs ipc call lockscreen lock' \
     timeout 330 '/usr/bin/niri msg action power-off-monitors' \

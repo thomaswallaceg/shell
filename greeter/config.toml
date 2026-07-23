@@ -1,8 +1,8 @@
 # greetd config for this repo's greeter/.
-# install.sh copies this to /etc/greetd/config.toml (prompting before overwrite
-# if that file already exists). Not read by Quickshell itself — greetd is what
-# loads it. `-d` on cage disables client-side decorations so Qt doesn't draw
-# a fallback titlebar around the greeter window.
+# install.sh symlinks this to /etc/greetd/config.toml (prompting before
+# replacing a pre-existing real file). Not read by Quickshell itself — greetd
+# is what loads it. `-d` on cage disables client-side decorations so Qt doesn't
+# draw a fallback titlebar around the greeter window.
 [terminal]
 vt = 1
 
