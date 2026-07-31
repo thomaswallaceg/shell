@@ -4,7 +4,7 @@ include "windows.kdl"
 include "outputs.kdl"
 
 environment {
-    QS_CONFIG_PATH "/home/thomas/projects/quickshell/shell"
+    QS_CONFIG_PATH "/home/thomas/projects/shell/shell"
 }
 
 screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
