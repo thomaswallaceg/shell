@@ -131,6 +131,7 @@ Scope {
             CpuWidget {}
             TemperatureWidget {}
             WorkspacesWidget {}
+            SystemTrayWidget {}
             NowPlayingWidget {}
           }
 
@@ -148,7 +149,6 @@ Scope {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 8
 
-            SystemTrayWidget {}
             VolumeWidget {}
             BrightnessWidget {}
             NetworkWidget {}

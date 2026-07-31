@@ -79,7 +79,13 @@ IconTextBarPill {
       default: return "";
     }
   }
-  trailingIconColor: Theme.textMuted
+  trailingIconColor: {
+    switch (PowerProfiles.profile) {
+      case PowerProfile.PowerSaver: return Theme.accentGreen;
+      case PowerProfile.Performance: return Theme.accentRed;
+      default: return Theme.textMuted;
+    }
+  }
 
   label: profileLabel !== "" ? profileLabel : (level + "%")
 
