@@ -1,5 +1,5 @@
 [Unit]
-Description=Idle management (auto-lock + display power via swayidle)
+Description=Idle management (auto-lock, display power, suspend via swayidle)
 PartOf=graphical-session.target
 After=graphical-session.target
 Requisite=graphical-session.target
@@ -11,6 +11,7 @@ EnvironmentFile=%E/quickshell/session.env
 ExecStart=/usr/bin/swayidle -w \
     timeout 300 '/usr/bin/qs ipc call lockscreen lock' \
     timeout 330 '/usr/bin/niri msg action power-off-monitors' \
+    timeout 600 '/usr/bin/systemctl suspend' \
     resume '/usr/bin/niri msg action power-on-monitors' \
     before-sleep '/usr/bin/qs ipc call lockscreen lock'
 Restart=on-failure

@@ -96,7 +96,7 @@ For Qt apps to follow qt6ct, the session needs `QT_QPA_PLATFORMTHEME=qt6ct` (e.g
 |------|----------|
 | PAM (`pam_unix.so`) | Password auth against the current user (`Quickshell.Services.Pam`) |
 | A compositor with `ext_session_lock_v1` (niri has it) | Hosts the lock (`Quickshell.Wayland.WlSessionLock`) |
-| [`swayidle`](https://github.com/swaywm/sway) (optional) | Idle-triggered auto-lock / display power-off — see [Setup script](#setup-script-installsh) |
+| [`swayidle`](https://github.com/swaywm/sway) (optional) | Idle-triggered auto-lock / display power-off / suspend — see [Setup script](#setup-script-installsh) |
 
 ### Greeter (optional)
 
@@ -140,7 +140,7 @@ install.sh             optional setup script: systemd units + greeter/greetd dep
   ```bash
   qs ipc call lockscreen lock
   ```
-  There's intentionally no matching `unlock` IPC call — the only way out is a successful PAM authentication. A niri keybind for this, and a ready-to-use `swayidle` idle timeout (lock, then power off the displays a bit later), are set up by [`./install.sh`](#setup-script-installsh)'s systemd step; wire the keybind into `niri/keybinds.kdl` if it isn't already.
+  There's intentionally no matching `unlock` IPC call — the only way out is a successful PAM authentication. A niri keybind for this, and a ready-to-use `swayidle` idle sequence (lock → power off displays → suspend), are set up by [`./install.sh`](#setup-script-installsh)'s systemd step; wire the keybind into `niri/keybinds.kdl` if it isn't already.
 
 ## Setup script (`install.sh`)
 
