@@ -11,6 +11,8 @@ Scope {
   property bool autohide: false
   property bool barVisible: true
 
+  TuiDismiss {}
+
   // Typography and bar height live in ThemeEngine — widgets use ThemeEngine.* directly.
 
   // Visibility behavior: with a single monitor the bar auto-hides and only
@@ -154,6 +156,17 @@ Scope {
             BatteryWidget {}
             TimeWidget {}
             PowerWidget {}
+          }
+        }
+
+        // Layer-shell panels don't take window focus, so bar clicks alone
+        // wouldn't fire the TUI close-on-focus-loss path.
+        MouseArea {
+          anchors.fill: parent
+          propagateComposedEvents: true
+          onPressed: mouse => {
+            Niri.closeUnfocusedTuiWindows(null);
+            mouse.accepted = false;
           }
         }
       }

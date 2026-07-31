@@ -24,6 +24,7 @@ Singleton {
   property var tuiWindowIds: []
 
   function openFloatingTui(command) {
+    closeUnfocusedTuiWindows(null);
     spawnProc.command = ["niri", "msg", "action", "spawn", "--", terminal, "-t", tuiWindowTitle, "-e", command];
     spawnProc.running = true;
   }
@@ -130,14 +131,19 @@ Singleton {
             root.closeUnfocusedTuiWindows(payload?.id ?? null)
             root.refreshActiveWindow()
             break
-          case "WindowOpenedOrChanged":
-            if (payload?.window?.title === root.tuiWindowTitle) {
-              const id = payload.window.id;
+          case "WindowOpenedOrChanged": {
+            const win = payload?.window
+            if (win?.title === root.tuiWindowTitle) {
+              const id = win.id;
               if (!root.tuiWindowIds.includes(id))
                 root.tuiWindowIds = root.tuiWindowIds.concat([id]);
             }
+            // niri skips WindowFocusChanged when a newly spawned window takes focus.
+            if (win?.is_focused)
+              root.closeUnfocusedTuiWindows(win.title === root.tuiWindowTitle ? win.id : null)
             root.refreshActiveWindow()
             break
+          }
           case "WindowClosed":
             root.removeTuiWindow(payload?.id)
             root.refreshActiveWindow()
