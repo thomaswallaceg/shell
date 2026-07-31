@@ -41,7 +41,10 @@ qs ipc call bar toggle
 qs ipc call bar peek
 qs ipc call wallpaper set /path/to/image.jpg
 qs ipc call wallpaper clear
+qs ipc call wallpaper pick
 ```
+
+Launcher action **Set wallpaper** (search “wallpaper”) opens a Zenity file dialog and applies the chosen image.
 
 ## Dependencies
 
@@ -66,6 +69,7 @@ qs ipc call wallpaper clear
 | `free` | Memory sampling in `services/SystemInfo.qml` (CPU uses `/proc/stat`) |
 | `gsettings` (GLib/dconf) | Prefer light/dark for GTK / libadwaita (and usually portals) |
 | `qt6ct` | Prefer light/dark for Qt6 apps (`darker` / `airy` palettes) |
+| `zenity` | Wallpaper file picker (launcher action / `qs ipc call wallpaper pick`) |
 
 For Qt apps to follow qt6ct, the session needs `QT_QPA_PLATFORMTHEME=qt6ct` (e.g. in niri’s `environment { }`). Already-open Qt apps typically need a restart to pick up a palette change. Override the palette files via `ThemeEngine.qt6ctDarkPalette` / `qt6ctLightPalette` if you prefer different qt6ct color schemes.
 

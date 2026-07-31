@@ -7,6 +7,7 @@ import QtQuick
 import QtQuick.Layouts
 import "../common/theme-switcher"
 import "../common/power"
+import "../wallpaper"
 
 Item {
     id: root
@@ -104,6 +105,15 @@ Item {
             keywords: ["mute", "volume", "audio", "sound"],
             glyph: "󰝟",
             action: "mute"
+        },
+        {
+            id: "__action__wallpaper",
+            kind: "action",
+            name: "Set wallpaper",
+            genericName: "Choose a wallpaper image",
+            keywords: ["wallpaper", "background", "desktop", "image"],
+            glyph: "󰋩",
+            action: "wallpaper"
         }
     ]
 
@@ -195,6 +205,9 @@ Item {
                     sink.audio.muted = !sink.audio.muted;
                 break;
             }
+            case "wallpaper":
+                WallpaperController.pick();
+                break;
         }
     }
 

@@ -94,6 +94,7 @@ check_dependencies() {
         "minical|Bar clock click-through"
         "xdg-open|Launcher file/directory opening"
         "fd|Launcher file search"
+        "zenity|Wallpaper file picker (launcher / qs ipc wallpaper pick)"
         "swayidle|Lockscreen idle timeout (this script's Step 2)"
         "systemctl|systemd user units (this script's Step 2) + power actions"
         "systemd-inhibit|Power menu reboot/shutdown inhibitor check"

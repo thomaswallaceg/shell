@@ -9,12 +9,15 @@ Scope {
   readonly property var _ctrl: WallpaperController
 
   IpcHandler {
-    target: "quickshell/wallpaper"
+    target: "wallpaper"
     function set(path: string): void {
       WallpaperController.setSource(path);
     }
     function clear(): void {
       WallpaperController.clear();
+    }
+    function pick(): void {
+      WallpaperController.pick();
     }
   }
 

@@ -21,6 +21,12 @@ Singleton {
     setSource("");
   }
 
+  function pick() {
+    if (pickProc.running)
+      return;
+    pickProc.running = true;
+  }
+
   FileView {
     id: confFile
     path: Quickshell.statePath("wallpaper.conf")
@@ -28,6 +34,25 @@ Singleton {
       const text = confFile.text().trim();
       if (text !== root.source)
         root.source = text;
+    }
+  }
+
+  Process {
+    id: pickProc
+    command: [
+      "zenity",
+      "--file-selection",
+      "--title=Choose wallpaper",
+      "--file-filter=Image files | *.png *.jpg *.jpeg *.webp *.bmp *.gif",
+      "--file-filter=All files | *"
+    ]
+    running: false
+    stdout: StdioCollector {
+      onStreamFinished: {
+        const path = text.trim();
+        if (path)
+          root.setSource(path);
+      }
     }
   }
 }
