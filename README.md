@@ -59,6 +59,7 @@ qs ipc call wallpaper clear
 | `brightnessctl` | Brightness widget + OSD |
 | NetworkManager | Network widget (`Quickshell.Networking`) |
 | UPower | Battery widget (`Quickshell.Services.UPower`) |
+| power-profiles-daemon | Battery widget click cycles power-saver / balanced / performance (`PowerProfiles`) |
 | PipeWire | Volume widget + OSD (`Quickshell.Services.Pipewire`) |
 | BlueZ stack | Bluetooth widget (`Quickshell.Bluetooth`) |
 | `lm_sensors` (`sensors`) | CPU temperature |
@@ -145,7 +146,7 @@ install.sh             optional setup script: systemd units + greeter/greetd dep
 
 `./install.sh` automates the machine-level integrations below:
 
-- **Step 0 — dependency check**: reports which of the project's CLI tools are on `PATH` (`[ok]` / `[missing]`), mirroring the tools the QML actually invokes (`brightnessctl`, `fd`, `wlctl`, …) plus this script's own helpers (`systemctl`, `rsync`, `swayidle`, `greetd`, `cage`, …). Non-fatal — most are per-widget/feature. Stacks consumed only via Quickshell modules (NetworkManager, UPower, PipeWire, BlueZ, PAM) are listed in the tables above, not here. Steps 1–3 do not re-check these; a missing required tool just fails the command under `set -e`.
+- **Step 0 — dependency check**: reports which of the project's CLI tools are on `PATH` (`[ok]` / `[missing]`), mirroring the tools the QML actually invokes (`brightnessctl`, `fd`, `wlctl`, …) plus this script's own helpers (`systemctl`, `rsync`, `swayidle`, `greetd`, `cage`, …). Non-fatal — most are per-widget/feature. Stacks consumed only via Quickshell modules (NetworkManager, UPower, power-profiles-daemon, PipeWire, BlueZ, PAM) are listed in the tables above, not here. Steps 1–3 do not re-check these; a missing required tool just fails the command under `set -e`.
 - **Step 1 — niri config symlink**: symlinks `~/.config/niri` to this checkout's `niri/` for the *current* user (backing up any pre-existing real directory first, after confirming). Run the script as each user who should log into niri via this repo's config — it's deliberately per-user rather than a single machine-wide path, so multiple accounts on one machine (including one shared by a single greeter) each resolve their own `~/.config/niri` independently.
 - **Step 2 — systemd units**: symlinks `systemd/quickshell.service` and `systemd/swayidle.service` into `~/.config/systemd/user/`, and writes `~/.config/quickshell/session.env` with this checkout's `QS_CONFIG_PATH` (niri's own `environment {}` block only reaches processes niri spawns directly, not independently-started systemd units). Then `daemon-reload`s and wires them to start alongside `niri.service`. This runs quickshell and the lockscreen's idle daemon (`swayidle`) as systemd **user** services tied to `graphical-session.target` instead of niri's own `spawn-at-startup` — you get `Restart=on-failure` and `systemctl --user status/restart/...` for both, at the cost of this one setup step per machine.
 - **Step 3 — greeter deployment**: deploys `common/` + `greeter/` to `/etc/quickshell/` (readable by the `greeter` system user, which usually can't see your home directory), symlinks [`greeter/config.toml`](greeter/config.toml) to `/etc/greetd/config.toml` (prompts before replacing a pre-existing real file), and enables `greetd`.

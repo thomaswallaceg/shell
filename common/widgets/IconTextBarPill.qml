@@ -12,7 +12,9 @@ BarPill {
 
   property string icon: ""
   property string label: ""
+  property string trailingIcon: ""
   property color iconColor: Theme.accentPrimary
+  property color trailingIconColor: iconColor
   property color textColor: Theme.textPrimary
 
   implicitWidth: content.width + 12
@@ -36,6 +38,14 @@ BarPill {
       text: pill.label
       color: pill.textColor
       font.pixelSize: ThemeEngine.fontSizeLg
+      font.family: ThemeEngine.fontFamily
+    }
+    Text {
+      anchors.verticalCenter: parent.verticalCenter
+      visible: pill.trailingIcon !== ""
+      text: pill.trailingIcon
+      color: pill.trailingIconColor
+      font.pixelSize: ThemeEngine.fontSizeIcon
       font.family: ThemeEngine.fontFamily
     }
   }
