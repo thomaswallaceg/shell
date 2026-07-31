@@ -59,11 +59,10 @@ IconTextBarPill {
     }
   }
 
-  MouseArea {
+  WheelStepMouseArea {
     anchors.fill: parent
-    cursorShape: Qt.PointingHandCursor
-    onWheel: (wheel) => {
-      brightnessSetProc.command = wheel.angleDelta.y > 0
+    onStepped: up => {
+      brightnessSetProc.command = up
         ? ["brightnessctl", "set", "5%+"]
         : ["brightnessctl", "set", "5%-"];
       brightnessSetProc.running = true;
