@@ -11,16 +11,17 @@ input {
 
     touchpad {
         // off
-        tap
-        // dwt
-        // dwtp
-        // drag false
+        tap // Tap to click
+        // dwt // Disable two-finger drag
+        // dwtp // Disable two-finger tap
+        drag true // Tap-and-drag
         // drag-lock
         // natural-scroll
-        accel-speed 0
-        accel-profile "flat"
-        // scroll-method "two-finger"
-        // disabled-on-external-mouse
+        accel-speed 0.2
+        accel-profile "adaptive"
+        scroll-method "two-finger"
+        scroll-factor 0.75
+        disabled-on-external-mouse
     }
 
     mouse {
