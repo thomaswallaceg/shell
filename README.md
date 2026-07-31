@@ -63,7 +63,7 @@ qs ipc call wallpaper clear
 | PipeWire | Volume widget + OSD (`Quickshell.Services.Pipewire`) |
 | BlueZ stack | Bluetooth widget (`Quickshell.Bluetooth`) |
 | `lm_sensors` (`sensors`) | CPU temperature |
-| `top` / `free` | CPU / memory sampling in `services/SystemInfo.qml` |
+| `free` | Memory sampling in `services/SystemInfo.qml` (CPU uses `/proc/stat`) |
 | `gsettings` (GLib/dconf) | Prefer light/dark for GTK / libadwaita (and usually portals) |
 | `qt6ct` | Prefer light/dark for Qt6 apps (`darker` / `airy` palettes) |
 

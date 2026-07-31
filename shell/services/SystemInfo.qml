@@ -13,13 +13,13 @@ Singleton {
 
   Process {
     id: cpuProc
-    command: ["sh", "-c", "top -bn1 | grep 'Cpu(s)' | sed 's/.*, *\\([0-9.]*\\)%* id.*/\\1/' | awk '{printf \"%2d%%\", int(100 - $1 + 0.5)}'"]
+    // Two /proc/stat samples; idle+iowait excluded from busy (same as btop).
+    // Leading space pads 1-digit values so the widget width stays stable.
+    command: ["sh", "-c", "awk 'BEGIN { getline < \"/proc/stat\"; split($0, a); close(\"/proc/stat\"); t1=a[2]+a[3]+a[4]+a[5]+a[6]+a[7]+a[8]+a[9]; i1=a[5]+a[6]; system(\"sleep 0.5\"); getline < \"/proc/stat\"; split($0, b); t2=b[2]+b[3]+b[4]+b[5]+b[6]+b[7]+b[8]+b[9]; i2=b[5]+b[6]; dt=t2-t1; if (dt<=0) { printf \" 0%%\"; exit } printf \"%2d%%\", int((dt-(i2-i1))*100/dt+0.5) }'"]
     running: true
 
     stdout: StdioCollector {
       onStreamFinished: {
-        // trimEnd (not trim) — a leading space is intentional padding to
-        // prevent the widget width from shifting between 1- and 2-digit values.
         root.cpuUsage = text.replace(/\s+$/, "")
       }
     }

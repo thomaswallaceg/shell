@@ -84,7 +84,6 @@ check_dependencies() {
         "alacritty|Bar terminal-launching widgets (Niri.terminal)"
         "brightnessctl|Brightness widget + OSD"
         "sensors|CPU temperature (lm_sensors)"
-        "top|CPU sampling (services/SystemInfo.qml)"
         "free|Memory sampling (services/SystemInfo.qml)"
         "gsettings|GTK/libadwaita light/dark preference (ThemeEngine)"
         "qt6ct|Qt6 app light/dark preference (ThemeEngine)"
