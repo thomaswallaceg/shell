@@ -4,7 +4,7 @@ Guidance for AI agents working in this repo. See `README.md` for user-facing doc
 
 ## What this is
 
-A [Quickshell](https://quickshell.outfoxxed.me/) (QML) desktop shell for the [niri](https://github.com/YaLTeR/niri) compositor: bar, launcher panel, notifications, OSD, theme switcher, lockscreen — plus a standalone greetd greeter that shares its theming/UI atoms with the main shell.
+A [Quickshell](https://quickshell.outfoxxed.me/) (QML) desktop shell for the [niri](https://github.com/YaLTeR/niri) compositor: bar, launcher panel, notifications, OSD, wallpaper, theme switcher, lockscreen — plus a standalone greetd greeter that shares its theming/UI atoms with the main shell.
 
 ## Project priority: portability
 
@@ -22,6 +22,7 @@ shell/                  the main Quickshell config — its own Quickshell config
   panel/                app launcher + theme browser; shared list/search components
   notifications/        notification popups + NotificationService singleton
   osd/                  session layer-shell OSD window (reads common/osd)
+  wallpaper/            desktop wallpaper (Wallpaper + WallpaperController); Background layer, namespace "wallpaper"
   lockscreen/           Wayland session lock (Lockscreen, LockContext/PamContext, LockSurface)
   services/             singletons: Niri, SystemInfo, Time, Displays
   common                symlink -> ../common
@@ -37,12 +38,12 @@ Quickshell treats every directory containing its own `shell.qml` as an isolated 
 
 This means:
 - **One symlink per config covers all of `common/`.** Earlier this project symlinked individual files/dirs (`shell/theme-switcher`, `shell/panel/PanelSearchInput.qml`, ...) at matching relative depth, which meant every file inside `common/` had to assume a specific depth from its symlinked location. Symlinking the whole `common/` directory as a single unit avoids that: relative imports *within* `common/` (e.g. `common/panel/PanelSearchInput.qml`'s `import "../theme-switcher"`) resolve against `common/`'s own real internal layout no matter where `common/` itself is mounted, so they never need to change. Files *outside* `common/` just import through the one `common` symlink, e.g. `shell/panel/ShellPanelTab.qml` does `import "../common/panel"` to bring in `PanelSearchInput`/`PanelSubtitle`/`PanelKeyHints`, and `shell/bar/widgets/*.qml` does `import "../../common/theme-switcher"`.
-- **Only genuinely generic, session-agnostic code belongs in `common/`.** Currently: `theme-switcher/` (palette/typography engine), a small `panel/` subset (`PanelSearchInput.qml`, `PanelKeyHints.qml`, `PanelSubtitle.qml`, `AuthPrompt.qml` — the last used by both the greeter's `GreeterWindow.qml` and the main shell's `lockscreen/LockSurface.qml`), and `osd/` (`OSDController`, `OSDHud`, `OSDPill` — used by the session overlay, lock surface, and greeter). `panel/PanelList*.qml`, `ShellPanel*.qml`, `LauncherTab.qml`, `ThemeTab.qml` stay in `shell/panel/` since nothing outside the main shell uses them yet; move more into `common/` the same way if something else needs them.
+- **Only genuinely generic, session-agnostic code belongs in `common/`.** Currently: `theme-switcher/` (palette/typography engine), a small `panel/` subset (`PanelSearchInput.qml`, `PanelKeyHints.qml`, `PanelSubtitle.qml`, `AuthPrompt.qml` — the last used by both the greeter's `GreeterWindow.qml` and the main shell's `lockscreen/LockSurface.qml`), and `osd/` (`OSDController`, `OSDHud`, `OSDPill` — used by the session overlay, lock surface, and greeter). `panel/PanelList*.qml`, `ShellPanel*.qml`, `LauncherTab.qml`, `ThemeTab.qml`, and `wallpaper/` stay in `shell/` since nothing outside the main shell uses them yet; move more into `common/` the same way if something else needs them.
 - Anything backed by a live user session (`services/Niri.qml`, `services/SystemInfo.qml`, `notifications/`) is not reusable by the greeter even in principle — there's no niri session or logged-in processes to query pre-login. Volume/brightness OSD is an exception: PipeWire + `brightnessctl` can still be useful on the greeter if those are available in the greetd/cage environment.
 
 ## Conventions
 
-- Singletons (`pragma Singleton`) live in `shell/services/`, `common/theme-switcher/`, and `common/osd/`; widgets read them directly (e.g. `Theme.textPrimary`, `ThemeEngine.fontFamily`, `Niri.workspaces`, `OSDController.showVolume`) rather than passing props down.
+- Singletons (`pragma Singleton`) live in `shell/services/`, `shell/wallpaper/`, `common/theme-switcher/`, and `common/osd/`; widgets read them directly (e.g. `Theme.textPrimary`, `ThemeEngine.fontFamily`, `Niri.workspaces`, `OSDController.showVolume`, `WallpaperController.source`) rather than passing props down.
 - Bar widgets are self-contained files in `shell/bar/widgets/`, built on `BarPill.qml` / `IconTextBarPill.qml`. Follow the existing widget style when adding one.
 - System calls go through `Quickshell.Io` `Process` + `StdioCollector`, or `Quickshell.execDetached(...)` for fire-and-forget commands. Shell one-liners are passed as `["sh", "-c", "..."]`; keep user-controlled input passed as separate argv entries (`$1`, `$2`, ...), not string-interpolated into the script, to avoid injection.
 - Config-relative paths use `Quickshell.shellPath(...)`; persisted state (e.g. selected theme) uses `Quickshell.statePath(...)` so the checkout can run from any location via `qs -p`.
@@ -57,7 +58,7 @@ There is no build step and no automated test suite — this is a live QML config
 - Run the main shell from the repo: `qs -p /path/to/this/repo/shell` (or `qs -c shell`/bare `qs`/`quickshell` if checked out at `~/.config/quickshell`, since niri's `environment { QS_CONFIG_NAME "shell" }` sets the default — see `README.md`).
 - Run the greeter the same way: `qs -p /path/to/this/repo/greeter` (or `-c greeter`).
 - Quickshell hot-reloads on file save; watch its stdout/stderr for QML errors after edits.
-- Sanity-check with `qs ipc call <target> <function>` for the various `IpcHandler`s (`bar`, `launcher`, `theme`, `font`, `notifications`, `lockscreen`) rather than only relying on visual testing. `qs ipc call lockscreen lock` is the only way to trigger the lockscreen without a real idle daemon/keybind.
+- Sanity-check with `qs ipc call <target> <function>` for the various `IpcHandler`s (`bar`, `launcher`, `theme`, `font`, `notifications`, `lockscreen`, `wallpaper`) rather than only relying on visual testing. `qs ipc call lockscreen lock` is the only way to trigger the lockscreen without a real idle daemon/keybind.
 - There's no linter config in-repo; keep QML formatting consistent with surrounding code (2-space indent is inconsistent across files already — match the file you're editing).
 
 ## `shell/lockscreen/` — session lock (implemented)
@@ -92,7 +93,7 @@ A separate Quickshell config (its own `shell.qml`), living in `greeter/` in this
 - **Files**: `greeter/shell.qml` (entrypoint), `greeter/GreeterWindow.qml` (`FloatingWindow` with the username → auth-prompt(s) → launch flow), plus `greeter/common` (symlink into `common/`, see above).
 - **Session launch**: `GreeterWindow.sessionCommand` (default `["niri-session"]`) is passed to `Greetd.launch(...)` once `readyToLaunch` fires, with no explicit config path — niri resolves `~/.config/niri/config.kdl` on its own for whichever user `niri-session` actually launches as. That means picking up this repo's config is entirely down to that user's `~/.config/niri` being a symlink to this checkout's `niri/` (`install.sh`'s `link_niri_config`, run once per user — see above), not anything the greeter passes at launch time. This is also what makes the greeter safe for multiple accounts on one machine: there's no single machine-wide `NIRI_CONFIG`/path file to collide on, each user's symlink is independent. Override `sessionCommand` if niri needs a wrapper (`dbus-run-session`, etc.) on a given machine.
 - **Deployment caveat**: greetd typically runs the greeter as a dedicated system user (often `greeter`), which likely can't read `/home/<you>/.config/quickshell`. Deploy both `common/` and `greeter/` (as siblings — the symlinks are relative) somewhere that user can read; `cp -r` preserves the relative symlinks as long as the sibling layout is kept. See README.md's setup steps.
-- **Theme sync**: the greeter reads the same `ThemeEngine`/`Theme` singletons as the main shell, and `common/theme-switcher/ThemeEngine.qml` persists the selected theme to a fixed system-wide path (`/var/lib/quickshell/theme.conf`) rather than `Quickshell.statePath(...)` (per-config-instance, scoped under `by-shell/<hash-of-config-path>`) or a `$HOME`-based path (the greeter usually runs as its own system user, e.g. `greeter`, with its own `$HOME`, so it'd never see your login user's file). A fixed path both processes can agree on regardless of which user runs them is the only thing that actually syncs across a real greetd deployment. Requires one-time per-machine setup this repo can't do for you: a dedicated group (e.g. `quickshell-theme`) containing both your login user and whichever user runs the greeter, owning `/var/lib/quickshell` with the setgid bit (`chmod 2775`) so it stays writable by exactly those accounts — see the setup commands in `common/theme-switcher/ThemeEngine.qml`'s comment above `sharedStateDir`.
+- **Theme sync**: the greeter reads the same `ThemeEngine`/`Theme` singletons as the main shell, but selection is persisted with `Quickshell.statePath(...)` (per-config under `~/.local/state/quickshell/by-shell/<hash>/`). The greeter is a separate config root and usually runs as its own system user, so it does not see the session's saved theme/font and falls back to the first entry in `themes.json` / the engine default font. Syncing across greetd would need a fixed path both users can write (e.g. the old `/var/lib/quickshell` approach) — not worth the machine setup unless that becomes a real requirement.
 
 ## Gotchas
 

@@ -12,12 +12,14 @@ import "panel"
 import "notifications"
 import "osd"
 import "lockscreen"
+import "wallpaper"
 import "common/power"
 
 Scope {
   // Keep the singleton alive for bar/launcher power actions.
   readonly property var _power: PowerController
 
+  Wallpaper {}
   ShellPanel {}
   Bar {}
   NotificationPopup {}

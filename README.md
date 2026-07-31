@@ -39,6 +39,8 @@ qs ipc call theme toggle
 qs ipc call font toggle
 qs ipc call bar toggle
 qs ipc call bar peek
+qs ipc call wallpaper set /path/to/image.jpg
+qs ipc call wallpaper clear
 ```
 
 ## Dependencies
@@ -116,6 +118,7 @@ shell/                 the main Quickshell config (its own shell.qml)
   panel/               launcher + theme + font tabs
   notifications/       notification UI + service
   osd/                 session layer-shell OSD window
+  wallpaper/           desktop wallpaper (Background layer-shell + WallpaperController)
   lockscreen/          session lock (Lockscreen, LockContext/PamContext, LockSurface)
   services/            Niri, SystemInfo, Time, Displays
   common                symlink -> ../common

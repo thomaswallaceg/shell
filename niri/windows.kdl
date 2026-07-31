@@ -1,8 +1,8 @@
 // Make the wallpaper stationary, rather than moving with workspaces.
 layer-rule {
-    // This is for swaybg; change for other wallpaper tools.
-    // Find the right namespace by running niri msg layers.
-    match namespace="^wallpaper$"
+    // Matches shell/wallpaper/Wallpaper.qml's WlrLayershell.namespace.
+    // Find namespaces with: niri msg layers
+    match namespace="^quickshell/wallpaper$"
     place-within-backdrop true
 }
 
@@ -148,4 +148,9 @@ window-rule {
     match app-id="steam" title=r#"^notificationtoasts_\d+_desktop$"#
     default-floating-position x=10 y=10 relative-to="bottom-right"
     open-focused false
+}
+
+window-rule {
+    match app-id=r#"^steam_app_"#
+    open-fullscreen true
 }
