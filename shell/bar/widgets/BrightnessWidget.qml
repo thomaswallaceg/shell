@@ -62,9 +62,10 @@ IconTextBarPill {
   WheelStepMouseArea {
     anchors.fill: parent
     onStepped: up => {
+      // -n keeps at least 1; 0 blanks intel_backlight entirely.
       brightnessSetProc.command = up
-        ? ["brightnessctl", "set", "5%+"]
-        : ["brightnessctl", "set", "5%-"];
+        ? ["brightnessctl", "-n", "set", "5%+"]
+        : ["brightnessctl", "-n", "set", "5%-"];
       brightnessSetProc.running = true;
     }
   }

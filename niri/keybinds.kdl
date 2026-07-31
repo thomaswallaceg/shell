@@ -21,8 +21,9 @@ binds { // wev to find out key codes
     XF86AudioNext        allow-when-locked=true { spawn "playerctl" "next"; }
     XF86AudioPrev        allow-when-locked=true { spawn "playerctl" "previous"; }
 
-    XF86MonBrightnessUp   allow-when-locked=true { spawn "brightnessctl" "set" "5%+"; }
-    XF86MonBrightnessDown allow-when-locked=true { spawn "brightnessctl" "set" "5%-"; }
+    // -n clamps to at least 1 so the panel never goes fully black.
+    XF86MonBrightnessUp   allow-when-locked=true { spawn "brightnessctl" "-n" "set" "5%+"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn "brightnessctl" "-n" "set" "5%-"; }
 
     // Open/close the Overview: a zoomed-out view of workspaces and windows.
     // You can also move the mouse into the top-left hot corner,
