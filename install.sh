@@ -83,6 +83,8 @@ check_dependencies() {
         "niri|niri compositor"
         "alacritty|Bar terminal-launching widgets (Niri.terminal)"
         "brightnessctl|Brightness widget + OSD"
+        "upower|Battery charge-limit discovery (BatteryWidget)"
+        "busctl|Battery charge-limit toggle via UPower D-Bus"
         "sensors|CPU temperature (lm_sensors)"
         "free|Memory sampling (services/SystemInfo.qml)"
         "gsettings|GTK/libadwaita light/dark preference (ThemeEngine)"

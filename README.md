@@ -61,8 +61,8 @@ Launcher action **Set wallpaper** (search “wallpaper”) opens a Zenity file d
 |------|----------|
 | `brightnessctl` | Brightness widget + OSD |
 | NetworkManager | Network widget (`Quickshell.Networking`) |
-| UPower | Battery widget (`Quickshell.Services.UPower`) |
-| power-profiles-daemon | Battery widget click cycles power-saver / balanced / performance (`PowerProfiles`) |
+| UPower (`upower` + `busctl`) | Battery widget (`Quickshell.Services.UPower`); right-click toggles charge limit via UPower D-Bus |
+| power-profiles-daemon | Battery widget left-click cycles power-saver / balanced / performance (`PowerProfiles`) |
 | PipeWire | Volume widget + OSD (`Quickshell.Services.Pipewire`) |
 | BlueZ stack | Bluetooth widget (`Quickshell.Bluetooth`) |
 | `lm_sensors` (`sensors`) | CPU temperature |

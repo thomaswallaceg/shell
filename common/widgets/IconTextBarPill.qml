@@ -11,9 +11,13 @@ BarPill {
   id: pill
 
   property string icon: ""
+  // Optional glyph immediately after `icon` (e.g. battery-care shield).
+  property string iconBadge: ""
+  property int iconBadgePixelSize: ThemeEngine.fontSizeSm
   property string label: ""
   property string trailingIcon: ""
   property color iconColor: Theme.accentPrimary
+  property color iconBadgeColor: iconColor
   property color trailingIconColor: iconColor
   property color textColor: Theme.textPrimary
 
@@ -24,13 +28,35 @@ BarPill {
     anchors.centerIn: parent
     spacing: 6
 
-    Text {
+    Row {
       anchors.verticalCenter: parent.verticalCenter
-      visible: pill.icon !== ""
-      text: pill.icon
-      color: pill.iconColor
-      font.pixelSize: ThemeEngine.fontSizeIcon
-      font.family: ThemeEngine.fontFamily
+      spacing: 2
+      visible: pill.icon !== "" || pill.iconBadge !== ""
+
+      Text {
+        id: mainIcon
+        anchors.verticalCenter: parent.verticalCenter
+        visible: pill.icon !== ""
+        text: pill.icon
+        color: pill.iconColor
+        font.pixelSize: ThemeEngine.fontSizeIcon
+        font.family: ThemeEngine.fontFamily
+      }
+      // Match the main icon's line box so a smaller badge sits on its midline.
+      Item {
+        visible: pill.iconBadge !== ""
+        width: badgeText.implicitWidth
+        height: mainIcon.visible ? mainIcon.height : badgeText.implicitHeight
+
+        Text {
+          id: badgeText
+          anchors.centerIn: parent
+          text: pill.iconBadge
+          color: pill.iconBadgeColor
+          font.pixelSize: pill.iconBadgePixelSize
+          font.family: ThemeEngine.fontFamily
+        }
+      }
     }
     Text {
       anchors.verticalCenter: parent.verticalCenter
