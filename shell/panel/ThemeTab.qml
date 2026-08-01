@@ -121,6 +121,17 @@ Item {
                     Behavior on color { ColorAnimation { duration: 150 } }
                 }
 
+                Text {
+                    text: "✓"
+                    color: Theme.accentGreen
+                    font.pixelSize: ThemeEngine.fontSizeLg
+                    font.family: ThemeEngine.fontFamily
+                    visible: ThemeEngine.currentId === modelData.id
+                    Layout.alignment: Qt.AlignVCenter
+
+                    Behavior on color { ColorAnimation { duration: 150 } }
+                }
+
                 Row {
                     spacing: 6
                     Layout.alignment: Qt.AlignVCenter
@@ -144,17 +155,6 @@ Item {
                             border.width: 1
                         }
                     }
-                }
-
-                Text {
-                    text: "✓"
-                    color: Theme.accentGreen
-                    font.pixelSize: ThemeEngine.fontSizeLg
-                    font.family: ThemeEngine.fontFamily
-                    visible: ThemeEngine.currentId === modelData.id
-                    Layout.alignment: Qt.AlignVCenter
-
-                    Behavior on color { ColorAnimation { duration: 150 } }
                 }
             }
         }
