@@ -5,7 +5,6 @@
 //@ pragma Env QT_QUICK_FLICKABLE_WHEEL_DECELERATION=10000
 
 import Quickshell
-import Quickshell.Io
 import QtQuick
 import qs.bar
 import qs.panel

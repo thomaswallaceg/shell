@@ -9,27 +9,22 @@ IconTextBarPill {
     const devices = Networking.devices?.values ?? [];
 
     for (const device of devices) {
-      if (device.type !== DeviceType.Wired)
+      if (device.type === DeviceType.Wifi)
         continue;
-      if (!device.connected && device.state !== ConnectionState.Connected)
+      if (!device.connected && device.state !== DeviceConnectionState.Connected)
         continue;
-
-      const network = device.network;
-      if (network?.connected || network?.state === ConnectionState.Connected)
-        return { type: "ethernet", label: network.name || device.name };
-
       return { type: "ethernet", label: device.name };
     }
 
     for (const device of devices) {
       if (device.type !== DeviceType.Wifi)
         continue;
-      if (!device.connected && device.state !== ConnectionState.Connected)
+      if (!device.connected && device.state !== DeviceConnectionState.Connected)
         continue;
 
       const networks = device.networks?.values ?? [];
       for (const network of networks) {
-        if (network?.connected || network?.state === ConnectionState.Connected)
+        if (network?.connected || network?.state === DeviceConnectionState.Connected)
           return { type: "wifi", label: network.name || device.name };
       }
 
