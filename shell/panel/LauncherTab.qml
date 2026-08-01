@@ -5,9 +5,9 @@ import Quickshell.Services.Mpris
 import Quickshell.Services.Pipewire
 import QtQuick
 import QtQuick.Layouts
-import "../common/theme-switcher"
-import "../common/power"
-import "../wallpaper"
+import qs.common.theme
+import qs.common.power
+import qs.wallpaper
 
 Item {
     id: root

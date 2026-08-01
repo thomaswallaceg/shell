@@ -1,5 +1,5 @@
-import "../../services"
-import "../../common/widgets" as CommonWidgets
+import qs.services
+import qs.common.widgets as CommonWidgets
 
 CommonWidgets.VolumeWidget {
   openMixerOnClick: true

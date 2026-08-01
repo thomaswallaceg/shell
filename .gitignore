@@ -7,4 +7,5 @@
 *.qmlc
 *.jsc
 .qml-cache/
+.qmlls.ini
 todo.txt

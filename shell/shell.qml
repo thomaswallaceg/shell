@@ -7,13 +7,13 @@
 import Quickshell
 import Quickshell.Io
 import QtQuick
-import "bar"
-import "panel"
-import "notifications"
-import "osd"
-import "lockscreen"
-import "wallpaper"
-import "common/power"
+import qs.bar
+import qs.panel
+import qs.notifications
+import qs.osd
+import qs.lockscreen
+import qs.wallpaper
+import qs.common.power
 
 Scope {
   // Keep the singleton alive for bar/launcher power actions.

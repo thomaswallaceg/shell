@@ -1,5 +1,5 @@
 import QtQuick
-import "../common/theme-switcher"
+import qs.common.theme
 
 Rectangle {
     id: root

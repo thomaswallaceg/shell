@@ -1,7 +1,7 @@
 import Quickshell
 import Quickshell.Wayland
 import QtQuick
-import "common/power"
+import qs.common.power
 
 // Session-layer confirm overlay. Lockscreen/greeter embed PowerConfirmDialog
 // on their own surfaces instead — layer-shell is blanked while locked.

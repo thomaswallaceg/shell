@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
-import "../theme-switcher"
+import qs.common.theme
 
 // Shared horizontal pill for the OSD — a rounded capsule with an icon glyph,
 // a fill bar, and a percentage label, laid out left to right. Used for both

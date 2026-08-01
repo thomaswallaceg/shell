@@ -1,6 +1,6 @@
 import QtQuick
-import "../../services"
-import "../../common/theme-switcher"
+import qs.services
+import qs.common.theme
 
 Item {
   id: root

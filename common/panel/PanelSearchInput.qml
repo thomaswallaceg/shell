@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Shapes
-import "../theme-switcher"
+import qs.common.theme
 
 Rectangle {
     id: root

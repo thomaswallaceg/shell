@@ -1,10 +1,10 @@
 import Quickshell
 import QtQuick
-import "../common/theme-switcher"
-import "../common/panel"
-import "../common/osd"
-import "../common/widgets"
-import "../common/power"
+import qs.common.theme
+import qs.common.panel
+import qs.common.osd
+import qs.common.widgets
+import qs.common.power
 
 // Per-screen lockscreen content, displayed inside each WlSessionLockSurface
 // (see Lockscreen.qml). Same visual language as the greeter's AuthPrompt,

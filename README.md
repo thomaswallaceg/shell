@@ -113,7 +113,7 @@ For Qt apps to follow qt6ct, the session needs `QT_QPA_PLATFORMTHEME=qt6ct` (e.g
 
 ```
 common/                shared code (no shell.qml of its own — not runnable directly)
-  theme-switcher/      ThemeEngine, palettes, themes.json
+  theme/               ThemeEngine, palettes, themes.json
   panel/               generic UI atoms: PanelSearchInput, PanelKeyHints, PanelSubtitle, AuthPrompt
   osd/                 OSDController, OSDHud, OSDPill (session + lockscreen + greeter)
 niri/                  compositor config (config.kdl + includes); symlinked from ~/.config/niri
@@ -132,7 +132,7 @@ systemd/               optional systemd user units (symlinked by install.sh; see
 install.sh             optional setup script: systemd units + greeter/greetd deployment
 ```
 
-`shell/` and `greeter/` each reach `common/` through a single `common` symlink rather than plain relative imports — Quickshell sandboxes QML module resolution to each config's own directory, so a symlink *inside* the config folder is required (see `AGENTS.md` for the full explanation). Don't break these symlinks when moving files around; if you need to reuse something else across configs, move the real file into `common/` — relative imports inside `common/` keep working unmodified no matter where it's mounted.
+`shell/` and `greeter/` each reach `common/` through a single `common` symlink — Quickshell sandboxes QML module resolution to each config's own directory, so a symlink *inside* the config folder is required (see `AGENTS.md` for the full explanation). QML files import modules with `import qs.<path>` (e.g. `import qs.common.theme`). Don't break these symlinks when moving files around; if you need to reuse something else across configs, move the real file into `common/`.
 
 ## Lockscreen
 
@@ -167,7 +167,7 @@ Two things it can't do for you:
 
 ## Greeter (greetd)
 
-`greeter/` is a login screen for [greetd](https://github.com/kalyverse/greetd), separate from the main niri+Quickshell session — it's its own Quickshell config (own `shell.qml`), sharing `common/theme-switcher/` and a few generic `common/panel/` UI atoms with `shell/`.
+`greeter/` is a login screen for [greetd](https://github.com/kalyverse/greetd), separate from the main niri+Quickshell session — it's its own Quickshell config (own `shell.qml`), sharing `common/theme/` and a few generic `common/panel/` UI atoms with `shell/`.
 
 ### Setup
 

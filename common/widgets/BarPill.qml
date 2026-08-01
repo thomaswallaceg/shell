@@ -1,5 +1,5 @@
 import QtQuick
-import "../theme-switcher"
+import qs.common.theme
 
 // Generic rounded "pill" chrome shared by every status indicator — just the
 // background shape. Callers provide their own content as children (typically

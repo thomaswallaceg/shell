@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
-import "../common/theme-switcher"
+import qs.common.theme
 
 Item {
     id: root

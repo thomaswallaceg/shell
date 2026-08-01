@@ -1,7 +1,7 @@
 import QtQuick
 import Quickshell.Io
 import Quickshell.Services.UPower
-import "../theme-switcher"
+import qs.common.theme
 
 IconTextBarPill {
   id: pill

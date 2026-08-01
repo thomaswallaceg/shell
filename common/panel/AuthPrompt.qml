@@ -1,7 +1,7 @@
 import Quickshell
 import QtQuick
 import QtQuick.Layouts
-import "../theme-switcher"
+import qs.common.theme
 
 // Shared clock + auth card UI for anything that needs a "type your
 // credentials" screen (greeter/GreeterWindow.qml, shell/lockscreen/). Purely

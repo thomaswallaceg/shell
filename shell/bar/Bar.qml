@@ -1,9 +1,9 @@
 import Quickshell
 import QtQuick
 import Quickshell.Io
-import "../services"
-import "../common/theme-switcher"
-import "widgets"
+import qs.services
+import qs.common.theme
+import qs.bar.widgets
 
 Scope {
   id: root

@@ -2,17 +2,17 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Greetd
 import QtQuick
-import "."
-import "common/theme-switcher"
-import "common/panel"
-import "common/osd"
-import "common/widgets"
-import "common/power"
+import qs
+import qs.common.theme
+import qs.common.panel
+import qs.common.osd
+import qs.common.widgets
+import qs.common.power
 
 // Fullscreen login window. Meant to run standalone inside a minimal kiosk
 // compositor (cage) launched by greetd — see README.md for the greetd/cage
 // setup. Not wired into the main shell.qml; this is its own Quickshell config,
-// sharing theme-switcher/ and a couple of panel UI atoms with the main shell
+// sharing theme/ and a couple of panel UI atoms with the main shell
 // via a single symlink into ../common/ (see AGENTS.md for why plain imports
 // can't reach outside this directory).
 FloatingWindow {

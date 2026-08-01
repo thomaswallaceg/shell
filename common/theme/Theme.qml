@@ -2,10 +2,10 @@ pragma Singleton
 
 import Quickshell
 import QtQuick
-import "."
+import qs.common.theme
 
 // Active palette — bound to ThemeEngine.current so any file that imports
-// theme-switcher can use Theme.bgBase. Engine API stays on ThemeEngine.* .
+// theme module can use Theme.bgBase. Engine API stays on ThemeEngine.* .
 Singleton {
     readonly property string id: ThemeEngine.current.id
     readonly property string name: ThemeEngine.current.name

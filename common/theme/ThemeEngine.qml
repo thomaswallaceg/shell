@@ -3,7 +3,7 @@ pragma Singleton
 import Quickshell
 import Quickshell.Io
 import QtQuick
-import "."
+import qs.common.theme
 
 // Loads palettes, tracks the active one, persists selection, and owns shell-wide
 // typography. Palette colors live on the Theme singleton; engine API on ThemeEngine.* .
@@ -136,7 +136,7 @@ Singleton {
 
     FileView {
         id: themesFile
-        path: Quickshell.shellPath("common/theme-switcher/themes.json")
+        path: Quickshell.shellPath("common/theme/themes.json")
         onTextChanged: {
             const raw = themesFile.text();
             if (!raw) return;

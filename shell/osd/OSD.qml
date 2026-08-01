@@ -1,8 +1,8 @@
 import Quickshell
 import Quickshell.Wayland
 import QtQuick
-import "../services"
-import "../common/osd"
+import qs.services
+import qs.common.osd
 
 Scope {
   id: root

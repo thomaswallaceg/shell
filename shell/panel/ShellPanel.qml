@@ -3,7 +3,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import QtQuick
 import QtQuick.Layouts
-import "../common/theme-switcher"
+import qs.common.theme
 
 Scope {
     id: root

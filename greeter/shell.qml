@@ -3,7 +3,7 @@
 //@ pragma Env QS_NO_RELOAD_POPUP=1
 
 import Quickshell
-import "."
+import qs
 
 // Separate Quickshell config from the main shell.qml — this one is launched by
 // greetd (via cage) before login, not as part of the niri+Quickshell session.

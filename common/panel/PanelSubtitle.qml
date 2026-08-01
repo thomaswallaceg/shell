@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
-import "../theme-switcher"
+import qs.common.theme
 
 Text {
     property bool animateColor: false

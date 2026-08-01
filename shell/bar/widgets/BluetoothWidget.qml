@@ -1,8 +1,8 @@
 import QtQuick
 import Quickshell.Bluetooth
-import "../../services"
-import "../../common/theme-switcher"
-import "../../common/widgets"
+import qs.services
+import qs.common.theme
+import qs.common.widgets
 
 IconTextBarPill {
   id: pill

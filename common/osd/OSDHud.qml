@@ -1,5 +1,5 @@
 import QtQuick
-import "../theme-switcher"
+import qs.common.theme
 
 // The volume/brightness pill stack — shared by the session overlay, lock
 // surface, and greeter (same visual, different host surface).

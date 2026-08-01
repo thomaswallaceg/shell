@@ -1,6 +1,6 @@
 import QtQuick
 import Quickshell.Services.Pipewire
-import "../theme-switcher"
+import qs.common.theme
 
 IconTextBarPill {
   id: pill

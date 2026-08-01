@@ -5,8 +5,8 @@ import Quickshell.Io
 import Quickshell.Services.Notifications
 import QtQuick
 import QtQuick.Layouts
-import "../services"
-import "../common/theme-switcher"
+import qs.services
+import qs.common.theme
 
 Scope {
     id: root

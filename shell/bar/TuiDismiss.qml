@@ -1,7 +1,7 @@
 import Quickshell
 import Quickshell.Wayland
 import QtQuick
-import "../services"
+import qs.services
 
 // niri leaves focus on the floating TUI when clicking empty desktop space;
 // this Bottom-layer catcher (below toplevels) closes it instead. Only mapped
