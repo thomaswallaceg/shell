@@ -8,31 +8,27 @@ import "../common/theme-switcher"
 Scope {
     id: root
 
-    property int currentTab: 0
+    property string currentTab: "launcher"
 
-    readonly property var tabs: [
-        { title: "Applications", icon: "󰀻", next: 1 },
-        { title: "Themes", icon: "󰏘", next: 2 },
-        { title: "Fonts", icon: "󰛖", next: 0 }
-    ]
-
-    readonly property string panelTitle: tabs[currentTab].title
-    readonly property string switchTabIcon: tabs[tabs[currentTab].next].icon
-    readonly property string switchTabLabel: tabs[tabs[currentTab].next].title
+    readonly property var tabs: {
+        "launcher": { title: "Applications", icon: "󰀻" },
+        "theme": { title: "Themes", icon: "󰏘" },
+        "font": { title: "Fonts", icon: "󰛖" }
+    }
 
     IpcHandler {
         target: "launcher"
-        function toggle(): void { root.toggleTab(0); }
+        function toggle(): void { root.toggleTab("launcher"); }
     }
 
     IpcHandler {
         target: "theme"
-        function toggle(): void { root.toggleTab(1); }
+        function toggle(): void { root.toggleTab("theme"); }
     }
 
     IpcHandler {
         target: "font"
-        function toggle(): void { root.toggleTab(2); }
+        function toggle(): void { root.toggleTab("font"); }
     }
 
     function closePanel() {
@@ -42,17 +38,12 @@ Scope {
     }
 
     function activateTab(tab) {
+        // Reset the incoming tab before showing it so the header and list
+        // swap in the same frame.
+        if (tab === "launcher") launcherTab.prepare();
+        else if (tab === "theme") themeTab.prepare();
+        else if (tab === "font") fontTab.prepare();
         root.currentTab = tab;
-        if (tab === 0)
-            launcherTab.prepare();
-        else if (tab === 1)
-            themeTab.prepare();
-        else
-            fontTab.prepare();
-    }
-
-    function switchTab() {
-        activateTab(tabs[currentTab].next);
     }
 
     function toggleTab(tab) {
@@ -60,17 +51,17 @@ Scope {
             closePanel();
             return;
         }
-        shellPanel.visible = true;
+        if (!shellPanel.visible) {
+            shellPanel.visible = true;
+        }
         activateTab(tab);
     }
 
     onCurrentTabChanged: {
-        if (!shellPanel.visible)
-            return;
-        if (currentTab !== 1)
-            themeTab.clearPreview();
-        if (currentTab !== 2)
-            fontTab.clearPreview();
+        if (!shellPanel.visible) return;
+
+        if (currentTab !== "theme") themeTab.clearPreview();
+        if (currentTab !== "font") fontTab.clearPreview();
     }
 
     PanelWindow {
@@ -125,7 +116,7 @@ Scope {
                     spacing: 8
 
                     Text {
-                        text: root.panelTitle
+                        text: root.tabs[root.currentTab].title
                         color: Theme.textPrimary
                         font.pixelSize: ThemeEngine.fontSizeLg
                         font.family: ThemeEngine.fontFamily
@@ -136,42 +127,18 @@ Scope {
 
                     Item { Layout.fillWidth: true }
 
-                    Rectangle {
-                        width: 32
-                        height: 32
-                        radius: 8
-                        color: tabSwitchArea.containsMouse ? Theme.bgSelected : Theme.bgSurface
-                        border.color: Theme.bgBorder
-                        border.width: 1
-
-                        Behavior on color { ColorAnimation { duration: 150 } }
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: root.switchTabIcon
-                            color: Theme.textSecondary
-                            font.pixelSize: ThemeEngine.fontSizeIcon
-                            font.family: ThemeEngine.fontFamily
-
-                            Behavior on color { ColorAnimation { duration: 150 } }
-                        }
-
-                        MouseArea {
-                            id: tabSwitchArea
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            Accessible.role: Accessible.Button
-                            Accessible.name: "Switch to " + root.switchTabLabel
-                            onClicked: root.switchTab()
-                        }
+                    Text {
+                        text: root.tabs[root.currentTab].icon
+                        color: Theme.textPrimary
+                        font.pixelSize: ThemeEngine.fontSizeIcon
+                        font.family: ThemeEngine.fontFamily
                     }
                 }
 
                 StackLayout {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    currentIndex: root.currentTab
+                    currentIndex: Object.keys(root.tabs).indexOf(root.currentTab)
 
                     LauncherTab {
                         id: launcherTab
@@ -180,13 +147,13 @@ Scope {
 
                     ThemeTab {
                         id: themeTab
-                        active: root.currentTab === 1 && shellPanel.visible
+                        active: shellPanel.visible && root.currentTab === "theme"
                         onCloseRequested: root.closePanel()
                     }
 
                     FontTab {
                         id: fontTab
-                        active: root.currentTab === 2 && shellPanel.visible
+                        active: shellPanel.visible && root.currentTab === "font"
                         onCloseRequested: root.closePanel()
                     }
                 }

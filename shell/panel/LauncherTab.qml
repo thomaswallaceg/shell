@@ -114,7 +114,25 @@ Item {
             keywords: ["wallpaper", "background", "desktop", "image"],
             glyph: "󰋩",
             action: "wallpaper"
-        }
+        },
+        {
+            id: "__action__theme",
+            kind: "shell_panel_action",
+            name: "Set theme",
+            genericName: "Choose a theme",
+            keywords: ["theme", "palette", "colors"],
+            glyph: "󰏘",
+            action: "theme"
+        },
+        {
+            id: "__action__font",
+            kind: "shell_panel_action",
+            name: "Set font",
+            genericName: "Choose a font",
+            keywords: ["font", "text", "style"],
+            glyph: "󰛖",
+            action: "font"
+        },
     ]
 
     function prepare() {
@@ -200,6 +218,7 @@ Item {
                 break;
             }
             case "mute": {
+                WallpaperController.pick();
                 const sink = Pipewire.defaultAudioSink;
                 if (sink && sink.audio)
                     sink.audio.muted = !sink.audio.muted;
@@ -207,6 +226,12 @@ Item {
             }
             case "wallpaper":
                 WallpaperController.pick();
+                break;
+            case "theme":
+                Quickshell.execDetached(["qs", "ipc", "call", "theme", "toggle"]);
+                break;
+            case "font":
+                Quickshell.execDetached(["qs", "ipc", "call", "font", "toggle"]);
                 break;
         }
     }
@@ -371,7 +396,8 @@ Item {
             return "Run command";
 
         const apps = values.filter(e => !e.kind || e.kind === "app");
-        const actions = values.filter(e => e.kind === "action");
+        const actions = values.filter(e =>
+            e.kind === "action" || e.kind === "shell_panel_action");
         const files = values.filter(e => e.kind === "file");
         const hasCalc = values.some(e => e.kind === "calc");
         const appCount = apps.length;
@@ -394,7 +420,7 @@ Item {
             return "run";
         if (entry?.kind === "file")
             return "open";
-        if (entry?.kind === "action")
+        if (entry?.kind === "action" || entry?.kind === "shell_panel_action")
             return "run";
         return "launch";
     }
@@ -542,18 +568,18 @@ Item {
             Quickshell.clipboardText = entry.result;
             root.closeRequested();
             return;
-        }
-        if (entry.kind === "run") {
+        } else if (entry.kind === "run") {
             Quickshell.execDetached(["sh", "-c", entry.command]);
             root.closeRequested();
             return;
-        }
-        if (entry.kind === "action") {
+        } else if (entry.kind === "action") {
             root.runAction(entry.action);
             root.closeRequested();
             return;
-        }
-        if (entry.kind === "file") {
+        } else if (entry.kind === "shell_panel_action") {
+            root.runAction(entry.action);
+            return;
+        } else if (entry.kind === "file") {
             const path = openLocation
                 ? root.parentDirectory(entry.path)
                 : entry.path;
@@ -608,6 +634,7 @@ Item {
             readonly property bool isCalc: modelData.kind === "calc"
             readonly property bool isRun: modelData.kind === "run"
             readonly property bool isAction: modelData.kind === "action"
+                || modelData.kind === "shell_panel_action"
             readonly property bool isFile: modelData.kind === "file"
             readonly property bool isSpecial: isCalc || isRun || isAction || isFile
 

@@ -10,8 +10,11 @@ Item {
     signal closeRequested()
 
     onActiveChanged: {
-        if (!active)
+        if (!active) {
             clearPreview();
+            return;
+        }
+        applyPreview();
     }
 
     function prepare() {
@@ -31,6 +34,12 @@ Item {
         ThemeEngine.previewId = "";
     }
 
+    function applyPreview() {
+        const idx = panelTab.selectedIndex;
+        if (idx < 0 || idx >= root.filteredThemes.length) return;
+        ThemeEngine.previewId = root.filteredThemes[idx].id;
+    }
+
     property var filteredThemes: {
         var query = panelTab.searchText.toLowerCase();
         var result = [];
@@ -46,10 +55,8 @@ Item {
     Connections {
         target: panelTab
         function onSelectedIndexChanged() {
-            if (!root.active) return;
-            const idx = panelTab.selectedIndex;
-            if (idx < 0 || idx >= root.filteredThemes.length) return;
-            ThemeEngine.previewId = root.filteredThemes[idx].id;
+            if (root.active)
+                root.applyPreview();
         }
     }
 

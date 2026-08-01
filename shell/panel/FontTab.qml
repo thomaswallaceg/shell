@@ -10,8 +10,11 @@ Item {
     signal closeRequested()
 
     onActiveChanged: {
-        if (!active)
+        if (!active) {
             clearPreview();
+            return;
+        }
+        applyPreview();
     }
 
     function prepare() {
@@ -24,11 +27,17 @@ Item {
             }
         }
         panelTab.selectedIndex = idx;
-        panelTab.positionAt(idx, ListView.Center);
+        panelTab.positionAt(idx, ListView.Top);
     }
 
     function clearPreview() {
         ThemeEngine.previewFontFamily = "";
+    }
+
+    function applyPreview() {
+        const idx = panelTab.selectedIndex;
+        if (idx < 0 || idx >= root.filteredFonts.length) return;
+        ThemeEngine.previewFontFamily = root.filteredFonts[idx].name;
     }
 
     property var filteredFonts: {
@@ -50,10 +59,8 @@ Item {
     Connections {
         target: panelTab
         function onSelectedIndexChanged() {
-            if (!root.active) return;
-            const idx = panelTab.selectedIndex;
-            if (idx < 0 || idx >= root.filteredFonts.length) return;
-            ThemeEngine.previewFontFamily = root.filteredFonts[idx].name;
+            if (root.active)
+                root.applyPreview();
         }
     }
 

@@ -70,7 +70,12 @@ ListView {
         }
     }
 
+    // Defer: positionViewAtIndex is a no-op / wrong while height is still 0
+    // (StackLayout page not laid out yet).
     function positionAt(index, mode) {
-        positionViewAtIndex(index, mode);
+        Qt.callLater(() => {
+            if (index >= 0 && index < count)
+                positionViewAtIndex(index, mode);
+        });
     }
 }
