@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Layouts
-import "../common/theme-switcher"
 import "../common/panel"
 
 // Shared layout for a panel tab: search bar, result-count subtitle, list,
