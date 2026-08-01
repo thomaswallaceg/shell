@@ -6,6 +6,7 @@ import Quickshell.Services.Notifications
 import QtQuick
 import QtQuick.Layouts
 import qs.services
+import qs.notifications
 import qs.common.theme
 
 Scope {

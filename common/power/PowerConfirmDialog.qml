@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import qs.common.theme
+import qs.common.power
 
 // Fullscreen confirm chrome for PowerController — parented onto a lock/greeter
 // surface or a session overlay PanelWindow. Only visible when inhibitors were

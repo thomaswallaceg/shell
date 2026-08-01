@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import qs.common.theme
 import qs.common.power
+import qs.common.widgets
 
 IconTextBarPill {
   id: pill

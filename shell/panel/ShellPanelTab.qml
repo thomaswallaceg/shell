@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import qs.common.panel
+import qs.panel
 
 // Shared layout for a panel tab: search bar, result-count subtitle, list,
 // and key hints footer. Navigation (arrow keys / count clamping) lives here

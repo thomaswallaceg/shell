@@ -45,7 +45,7 @@ This means:
 
 ## Conventions
 
-- Prefer `import qs.<path>` over quoted relative directory imports (`import "../foo"`). Create an empty `.qmlls.ini` next to each config's `shell.qml` (gitignored; Quickshell populates it) so `qmlls` can resolve singletons.
+- Prefer `import qs.<path>` over quoted relative directory imports (`import "../foo"`). Create an empty `.qmlls.ini` next to each config's `shell.qml` (gitignored; Quickshell populates it) so `qmlls` can resolve singletons. Same-directory singletons/types still need an explicit `import qs.<this.module>` for the LSP (runtime implicit imports are not enough) — e.g. `OSDHud.qml` does `import qs.common.osd` to see `OSDController.*`.
 - Singletons (`pragma Singleton`) live in `shell/services/`, `shell/wallpaper/`, `common/theme/`, and `common/osd/`; widgets read them directly (e.g. `Theme.textPrimary`, `ThemeEngine.fontFamily`, `Niri.workspaces`, `OSDController.showVolume`, `WallpaperController.source`) rather than passing props down.
 - Bar widgets are self-contained files in `shell/bar/widgets/`, built on `BarPill.qml` / `IconTextBarPill.qml`. Follow the existing widget style when adding one.
 - System calls go through `Quickshell.Io` `Process` + `StdioCollector`, or `Quickshell.execDetached(...)` for fire-and-forget commands. Shell one-liners are passed as `["sh", "-c", "..."]`; keep user-controlled input passed as separate argv entries (`$1`, `$2`, ...), not string-interpolated into the script, to avoid injection.

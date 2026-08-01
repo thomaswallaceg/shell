@@ -8,6 +8,7 @@ import QtQuick.Layouts
 import qs.common.theme
 import qs.common.power
 import qs.wallpaper
+import qs.panel
 
 Item {
     id: root

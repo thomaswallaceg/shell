@@ -4,6 +4,7 @@ import Quickshell.Wayland
 import QtQuick
 import QtQuick.Layouts
 import qs.common.theme
+import qs.panel
 
 Scope {
     id: root

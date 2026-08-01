@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import qs.common.theme
+import qs.panel
 
 ListView {
     id: root
