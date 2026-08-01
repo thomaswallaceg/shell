@@ -215,6 +215,8 @@ FloatingWindow {
                 spacing: 8
 
                 VolumeWidget {}
+                BrightnessWidget {}
+                BatteryWidget {}
                 PowerWidget {
                     id: powerWidget
                     showSessionActions: false
