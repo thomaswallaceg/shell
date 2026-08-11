@@ -22,12 +22,12 @@ Item {
         applyPreview();
     }
 
-    function isPropoNerdFont(family) {
-        return /Nerd Font Propo| NFP\b|NFP$/i.test(family);
+    function isNerdFont(family) {
+        return /Nerd[\s_-]?Font|[\s_-]NF(P|M)?\b|NFP\b|NFM\b/i.test(family);
     }
 
-    function isNerdFont(family) {
-        return /Nerd Font| NF\b|NFP\b/i.test(family);
+    function isPropoNerdFont(family) {
+        return (/Nerd[\s_-]?Font[\s_-]?Propo|NFP\b|NFP$|[\s_-]Propo\b/i.test(family)) && root.isNerdFont(family);
     }
 
     function updateFilteredFonts() {
