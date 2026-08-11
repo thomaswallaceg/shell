@@ -10,7 +10,7 @@ import qs.common.theme
 Singleton {
     id: root
 
-    property string savedFontFamily: "CodeNewRoman Nerd Font"
+    property string savedFontFamily: "CodeNewRoman Nerd Font Propo"
     property string previewFontFamily: ""
     readonly property string fontFamily: previewFontFamily !== "" ? previewFontFamily : savedFontFamily
     readonly property int fontSizeSm:   14
