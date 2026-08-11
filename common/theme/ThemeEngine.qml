@@ -142,6 +142,9 @@ Singleton {
             if (!raw) return;
             try {
                 const parsed = JSON.parse(raw);
+                // Destroy old palette objects before repopulating so they don't
+                // accumulate as orphans across hot-reloads or file-watch triggers.
+                for (const t of root.themes) t.destroy();
                 const loaded = [];
                 for (let i = 0; i < parsed.length; i++)
                     loaded.push(themeComponent.createObject(root, parsed[i]));

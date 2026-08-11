@@ -23,4 +23,17 @@ Singleton {
     }
     return smallest;
   }
+
+  // The screen with the largest area — used by the lockscreen to decide which
+  // display shows the auth card initially.
+  readonly property var largestScreen: {
+    const screens = Quickshell.screens;
+    if (!screens || screens.length === 0) return null;
+    let largest = screens[0];
+    for (let i = 1; i < screens.length; i++) {
+      if (screens[i].width * screens[i].height > largest.width * largest.height)
+        largest = screens[i];
+    }
+    return largest;
+  }
 }

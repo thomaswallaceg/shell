@@ -10,6 +10,8 @@ Item {
 
     signal closeRequested()
 
+    property var filteredFonts: []
+
     onActiveChanged: {
         if (!active) {
             clearPreview();
@@ -18,10 +20,26 @@ Item {
         applyPreview();
     }
 
+    function updateFilteredFonts() {
+        const query = panelTab.searchText.trim().toLowerCase();
+        const fonts = Qt.fontFamilies();
+        const result = [];
+        for (let i = 0; i < fonts.length; i++) {
+            const family = fonts[i];
+            if (query === "" || family.toLowerCase().indexOf(query) >= 0) {
+                result.push({
+                    id: "__font__" + family,
+                    name: family
+                });
+            }
+        }
+        root.filteredFonts = result;
+    }
+
     function prepare() {
         panelTab.clearSearch();
-        var idx = 0;
-        for (var i = 0; i < filteredFonts.length; i++) {
+        let idx = 0;
+        for (let i = 0; i < filteredFonts.length; i++) {
             if (filteredFonts[i].name === ThemeEngine.savedFontFamily) {
                 idx = i;
                 break;
@@ -41,20 +59,11 @@ Item {
         ThemeEngine.previewFontFamily = root.filteredFonts[idx].name;
     }
 
-    property var filteredFonts: {
-        var query = panelTab.searchText.trim().toLowerCase();
-        var fonts = Qt.fontFamilies();
-        var result = [];
-        for (var i = 0; i < fonts.length; i++) {
-            var family = fonts[i];
-            if (query === "" || family.toLowerCase().indexOf(query) >= 0) {
-                result.push({
-                    id: "__font__" + family,
-                    name: family
-                });
-            }
+    Connections {
+        target: panelTab
+        function onSearchTextChanged() {
+            root.updateFilteredFonts();
         }
-        return result;
     }
 
     Connections {
@@ -64,6 +73,8 @@ Item {
                 root.applyPreview();
         }
     }
+
+    Component.onCompleted: root.updateFilteredFonts()
 
     ShellPanelTab {
         id: panelTab

@@ -52,7 +52,7 @@ Scope {
         anchors.fill: parent
 
         property bool useA: true
-        property int loadToken: 0
+        property int loadGeneration: 0
 
         function pathToUrl(path) {
           if (path.startsWith("file:") || path.startsWith("http:") || path.startsWith("https:"))
@@ -73,13 +73,13 @@ Scope {
             return;
           }
           const target = useA ? imageB : imageA;
-          target.token = ++loadToken;
+          target.loadGen = ++loadGeneration;
           target.source = url;
         }
 
         Image {
           id: imageA
-          property int token: 0
+          property int loadGen: 0
           anchors.fill: parent
           fillMode: Image.PreserveAspectCrop
           asynchronous: true
@@ -91,14 +91,14 @@ Scope {
             }
           }
           onStatusChanged: {
-            if (status === Image.Ready && token === content.loadToken && token > 0)
+            if (status === Image.Ready && loadGen === content.loadGeneration && loadGen > 0)
               content.useA = true;
           }
         }
 
         Image {
           id: imageB
-          property int token: 0
+          property int loadGen: 0
           anchors.fill: parent
           fillMode: Image.PreserveAspectCrop
           asynchronous: true
@@ -110,7 +110,7 @@ Scope {
             }
           }
           onStatusChanged: {
-            if (status === Image.Ready && token === content.loadToken && token > 0)
+            if (status === Image.Ready && loadGen === content.loadGeneration && loadGen > 0)
               content.useA = false;
           }
         }

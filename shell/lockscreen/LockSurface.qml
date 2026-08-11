@@ -113,8 +113,19 @@ Rectangle {
         visible: root.active && (OSDController.showVolume || OSDController.showBrightness)
     }
 
-    onActiveChanged: if (root.active) authPrompt.focusInput();
-    Component.onCompleted: if (root.active) authPrompt.focusInput();
+    // `forceActiveFocus()` is a no-op if called before the compositor has
+    // mapped the lock surface and granted it keyboard focus. Use a short timer
+    // on first completion so the Wayland roundtrip can finish; Qt.callLater is
+    // enough for subsequent active-screen switches (surface already mapped).
+    onActiveChanged: if (root.active) Qt.callLater(authPrompt.focusInput)
+    Component.onCompleted: if (root.active) focusTimer.start()
+
+    Timer {
+        id: focusTimer
+        interval: 50
+        repeat: false
+        onTriggered: authPrompt.focusInput()
+    }
 
     Connections {
         target: root.context

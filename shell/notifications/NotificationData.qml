@@ -74,15 +74,6 @@ Item {
         }
     }
 
-    Timer {
-        id: expireTimer
-        interval: notificationData.effectiveTimeout
-        repeat: false
-        running: !notificationData.closed
-                 && !notificationData.hovered
-                 && notificationData.urgency !== NotificationUrgency.Critical
-        onTriggered: notificationData.expire()
-    }
 
     Component.onCompleted: {
         if (!notification) return;

@@ -17,6 +17,8 @@ Singleton {
   property bool volumeMuted: false
   property real brightnessValue: 0
   property real maxBrightness: 1
+  // Exposed so BrightnessWidget can bind instead of running its own discovery.
+  property string backlightPath: ""
   // Pipewire emits volume/mute while the sink comes up; suppress those so the
   // OSD doesn't flash on every shell start. Brightness seeds via its first read.
   property bool _volumeReady: false
@@ -101,6 +103,7 @@ Singleton {
         if (lines.length >= 2) {
           const max = parseInt(lines[1]);
           if (!isNaN(max) && max > 0) root.maxBrightness = max;
+          root.backlightPath = lines[0];
           brightnessFile.path = lines[0];
           brightnessReadProc.running = true;
         }

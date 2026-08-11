@@ -1,6 +1,7 @@
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Io
+import qs.services
 
 // Wayland session lock (ext_session_lock_v1 via WlSessionLock), themed like
 // the greeter but authenticating the already-logged-in user through
@@ -11,17 +12,7 @@ import Quickshell.Io
 Scope {
     id: root
 
-    readonly property var screens: Quickshell.screens
-    readonly property var mainScreen: {
-        if (!screens || screens.length === 0)
-            return null;
-        let largest = screens[0];
-        for (let i = 1; i < screens.length; i++) {
-            if (screens[i].width * screens[i].height > largest.width * largest.height)
-                largest = screens[i];
-        }
-        return largest;
-    }
+    readonly property var mainScreen: Displays.largestScreen
 
     // Which screen currently shows the auth card, mirroring GreeterWindow's
     // "biggest screen first, then whichever the mouse is over" behavior.

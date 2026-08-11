@@ -10,6 +10,8 @@ Item {
 
     signal closeRequested()
 
+    property var filteredThemes: []
+
     onActiveChanged: {
         if (!active) {
             clearPreview();
@@ -18,10 +20,22 @@ Item {
         applyPreview();
     }
 
+    function updateFilteredThemes() {
+        const query = panelTab.searchText.toLowerCase();
+        const result = [];
+        for (let i = 0; i < ThemeEngine.themes.length; i++) {
+            const t = ThemeEngine.themes[i];
+            if (query === "" || t.name.toLowerCase().indexOf(query) >= 0 || t.family.toLowerCase().indexOf(query) >= 0) {
+                result.push({ data: t, id: t.id, family: t.family });
+            }
+        }
+        root.filteredThemes = result;
+    }
+
     function prepare() {
         panelTab.clearSearch();
-        var idx = 0;
-        for (var i = 0; i < filteredThemes.length; i++) {
+        let idx = 0;
+        for (let i = 0; i < filteredThemes.length; i++) {
             if (filteredThemes[i].id === ThemeEngine.currentId) {
                 idx = i;
                 break;
@@ -41,16 +55,11 @@ Item {
         ThemeEngine.previewId = root.filteredThemes[idx].id;
     }
 
-    property var filteredThemes: {
-        var query = panelTab.searchText.toLowerCase();
-        var result = [];
-        for (var i = 0; i < ThemeEngine.themes.length; i++) {
-            var t = ThemeEngine.themes[i];
-            if (query === "" || t.name.toLowerCase().indexOf(query) >= 0 || t.family.toLowerCase().indexOf(query) >= 0) {
-                result.push({ data: t, id: t.id, family: t.family });
-            }
+    Connections {
+        target: panelTab
+        function onSearchTextChanged() {
+            root.updateFilteredThemes();
         }
-        return result;
     }
 
     Connections {
@@ -60,6 +69,15 @@ Item {
                 root.applyPreview();
         }
     }
+
+    Connections {
+        target: ThemeEngine
+        function onThemesChanged() {
+            root.updateFilteredThemes();
+        }
+    }
+
+    Component.onCompleted: root.updateFilteredThemes()
 
     ShellPanelTab {
         id: panelTab

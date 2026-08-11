@@ -6,14 +6,7 @@ import qs.common.widgets
 BarPill {
   id: root
 
-  property var activePlayer: {
-    const players = Mpris.players.values;
-    if (!players || players.length === 0) return null;
-    for (const p of players) {
-      if (p.playbackState === MprisPlaybackState.Playing) return p;
-    }
-    return players[0];
-  }
+  property var activePlayer: null
 
   implicitWidth: nowPlayingContent.width + 16
   visible: activePlayer !== null
@@ -25,6 +18,30 @@ BarPill {
     const title = activePlayer.trackTitle || "";
     return "Now playing: " + (artist ? artist + " - " : "") + title;
   }
+
+  function updateActivePlayer() {
+    const players = Mpris.players.values;
+    if (!players || players.length === 0) {
+      root.activePlayer = null;
+      return;
+    }
+    for (const p of players) {
+      if (p.playbackState === MprisPlaybackState.Playing) {
+        root.activePlayer = p;
+        return;
+      }
+    }
+    root.activePlayer = players[0];
+  }
+
+  Connections {
+    target: Mpris
+    function onPlayersChanged() {
+      root.updateActivePlayer();
+    }
+  }
+
+  Component.onCompleted: root.updateActivePlayer()
 
   Row {
     id: nowPlayingContent

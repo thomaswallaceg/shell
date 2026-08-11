@@ -8,7 +8,6 @@ Singleton {
   id: root
 
   property string cpuUsage: "0%"
-  property string memoryUsage: "0%"
   property string temperature: "0°C"
 
   Process {
@@ -25,17 +24,7 @@ Singleton {
     }
   }
 
-  Process {
-    id: memProc
-    command: ["sh", "-c", "free | grep Mem | awk '{printf \"%.1f%%\", ($3/$2) * 100.0}'"]
-    running: true
 
-    stdout: StdioCollector {
-      onStreamFinished: {
-        root.memoryUsage = text.trim()
-      }
-    }
-  }
 
   Process {
     id: tempProc
@@ -55,7 +44,6 @@ Singleton {
     repeat: true
     onTriggered: {
       cpuProc.running = true
-      memProc.running = true
       tempProc.running = true
     }
   }

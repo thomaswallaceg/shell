@@ -7,7 +7,6 @@ import qs.bar.widgets
 
 Scope {
   id: root
-  //property bool autohide: Displays.singleMonitor
   property bool autohide: false
   property bool barVisible: true
 

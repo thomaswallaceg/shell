@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell.Io
+import qs.common.osd
 import qs.common.theme
 import qs.common.widgets
 
@@ -7,9 +8,8 @@ IconTextBarPill {
   id: pill
 
   property real brightnessValue: 0
-  property real brightnessMax: 1
 
-  visible: brightnessFile.path !== ""
+  visible: OSDController.backlightPath !== ""
   icon: "󰃠"
   iconColor: Theme.accentOrange
   label: Math.round(brightnessValue * 100) + "%"
@@ -19,7 +19,7 @@ IconTextBarPill {
 
   FileView {
     id: brightnessFile
-    path: ""
+    path: OSDController.backlightPath
     watchChanges: true
     onFileChanged: brightnessReadProc.running = true
   }
@@ -27,12 +27,12 @@ IconTextBarPill {
   Process {
     id: brightnessReadProc
     command: ["brightnessctl", "get"]
-    running: false
+    running: OSDController.backlightPath !== ""
     stdout: StdioCollector {
       onStreamFinished: {
         const val = parseInt(text.trim());
-        if (!isNaN(val) && pill.brightnessMax > 0)
-          pill.brightnessValue = val / pill.brightnessMax;
+        if (!isNaN(val) && OSDController.maxBrightness > 0)
+          pill.brightnessValue = val / OSDController.maxBrightness;
       }
     }
   }
@@ -40,23 +40,6 @@ IconTextBarPill {
   Process {
     id: brightnessSetProc
     running: false
-  }
-
-  Process {
-    id: backlightDiscovery
-    command: ["sh", "-c", "p=$(ls -d /sys/class/backlight/*/brightness 2>/dev/null | head -1); [ -n \"$p\" ] && echo \"$p\" && cat \"${p%brightness}max_brightness\""]
-    running: true
-    stdout: StdioCollector {
-      onStreamFinished: {
-        const lines = text.trim().split("\n");
-        if (lines.length >= 2) {
-          const max = parseInt(lines[1]);
-          if (!isNaN(max) && max > 0) pill.brightnessMax = max;
-          brightnessFile.path = lines[0];
-          brightnessReadProc.running = true;
-        }
-      }
-    }
   }
 
   WheelStepMouseArea {

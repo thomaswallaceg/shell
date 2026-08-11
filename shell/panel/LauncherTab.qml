@@ -219,7 +219,6 @@ Item {
                 break;
             }
             case "mute": {
-                WallpaperController.pick();
                 const sink = Pipewire.defaultAudioSink;
                 if (sink && sink.audio)
                     sink.audio.muted = !sink.audio.muted;
