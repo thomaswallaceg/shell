@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import qs.common.theme
 import qs.common.panel
 import qs.panel
 
@@ -26,6 +27,7 @@ Item {
     property string sectionProperty: ""
     property string emptyText: ""
     property string subtitleText: ""
+    property string warningText: ""
     property var hints: []
 
     signal activated(int modifiers)
@@ -65,6 +67,40 @@ Item {
 
         PanelSubtitle {
             text: root.subtitleText
+        }
+
+        Rectangle {
+            visible: root.warningText !== ""
+            Layout.fillWidth: true
+            implicitHeight: warningLayout.implicitHeight + 10
+            radius: 6
+            color: Qt.alpha(Theme.accentOrange, 0.12)
+            border.color: Qt.alpha(Theme.accentOrange, 0.3)
+            border.width: 1
+
+            RowLayout {
+                id: warningLayout
+                anchors.fill: parent
+                anchors.leftMargin: 10
+                anchors.rightMargin: 10
+                spacing: 8
+
+                Text {
+                    text: "⚠️"
+                    font.pixelSize: ThemeEngine.fontSizeSm
+                    Layout.alignment: Qt.AlignVCenter
+                }
+
+                Text {
+                    text: root.warningText
+                    color: Theme.textSecondary
+                    font.pixelSize: ThemeEngine.fontSizeSm
+                    font.family: ThemeEngine.fontFamily
+                    wrapMode: Text.WordWrap
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignVCenter
+                }
+            }
         }
 
         PanelList {

@@ -52,7 +52,7 @@ Launcher action **Set wallpaper** (search “wallpaper”) opens a Zenity file d
 
 - [Quickshell](https://quickshell.outfoxxed.me/) (Qt 6)
 - [niri](https://github.com/YaLTeR/niri)
-- A [Nerd Font](https://www.nerdfonts.com/) — this config defaults to **CodeNewRoman Nerd Font** (`ThemeEngine.fontFamily`)
+- A *Propo* [Nerd Font](https://www.nerdfonts.com/) — this config defaults to **CodeNewRoman Nerd Font Propo** (`ThemeEngine.fontFamily`)
 - [alacritty](https://alacritty.org/) (or change `Niri.terminal` in `shell/services/Niri.qml`)
 
 ### Bar / OSD / system services

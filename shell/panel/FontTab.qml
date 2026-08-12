@@ -11,6 +11,8 @@ Item {
     signal closeRequested()
 
     property var filteredFonts: []
+    property bool hasPropoFonts: true
+    property bool hasNerdFonts: true
 
     onActiveChanged: {
         if (!active) {
@@ -20,16 +22,37 @@ Item {
         applyPreview();
     }
 
+    function isNerdFont(family) {
+        return /Nerd[\s_-]?Font|[\s_-]NF(P|M)?\b|NFP\b|NFM\b/i.test(family);
+    }
+
+    function isPropoNerdFont(family) {
+        return (/Nerd[\s_-]?Font[\s_-]?Propo|NFP\b|NFP$|[\s_-]Propo\b/i.test(family)) && root.isNerdFont(family);
+    }
+
     function updateFilteredFonts() {
         const query = panelTab.searchText.trim().toLowerCase();
-        const fonts = Qt.fontFamilies();
+        const allFonts = Qt.fontFamilies();
+
+        // 1. Prefer Propo Nerd Fonts (*Nerd Font Propo*, *NFP*)
+        // 2. If none installed, fall back to any Nerd Font (*Nerd Font*, *NF*)
+        // 3. If no Nerd Fonts installed, fall back to all system fonts
+        const propo = allFonts.filter(f => root.isPropoNerdFont(f));
+        const nerd = allFonts.filter(f => root.isNerdFont(f));
+
+        root.hasPropoFonts = propo.length > 0;
+        root.hasNerdFonts = nerd.length > 0;
+
+        const baseList = root.hasPropoFonts ? propo : (root.hasNerdFonts ? nerd : allFonts);
+
         const result = [];
-        for (let i = 0; i < fonts.length; i++) {
-            const family = fonts[i];
+        for (let i = 0; i < baseList.length; i++) {
+            const family = baseList[i];
             if (query === "" || family.toLowerCase().indexOf(query) >= 0) {
                 result.push({
                     id: "__font__" + family,
-                    name: family
+                    name: family,
+                    isPropo: root.isPropoNerdFont(family)
                 });
             }
         }
@@ -89,6 +112,13 @@ Item {
         subtitleText: {
             const n = root.filteredFonts.length;
             return n + " font" + (n !== 1 ? "s" : "") + " — " + ThemeEngine.fontFamily;
+        }
+        warningText: {
+            if (!root.hasPropoFonts && root.hasNerdFonts)
+                return "No Propo Nerd Fonts found — showing standard Nerd Fonts.";
+            if (!root.hasPropoFonts && !root.hasNerdFonts)
+                return "No Nerd Fonts detected on system — interface icons may not display correctly.";
+            return "";
         }
 
         hints: [
