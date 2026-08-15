@@ -25,7 +25,7 @@ Singleton {
 
   function openFloatingTui(command) {
     closeUnfocusedTuiWindows(null);
-    spawnProc.command = ["niri", "msg", "action", "spawn", "--", terminal, "-t", tuiWindowTitle, "-e", command];
+    spawnProc.command = ["niri", "msg", "action", "spawn", "--", terminal, "-t", tuiWindowTitle, "-e", ...command.split(" ")];
     spawnProc.running = true;
   }
 
