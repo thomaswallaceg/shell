@@ -11,19 +11,22 @@ binds { // wev to find out key codes
     Mod+Space hotkey-overlay-title="Open the Launcher" { spawn "qs" "ipc" "call" "launcher" "toggle"; }
     Super+Alt+L hotkey-overlay-title="Lock the Screen" { spawn "qs" "ipc" "call" "lockscreen" "lock"; }
 
-    XF86AudioRaiseVolume allow-when-locked=true { spawn "wpctl" "set-volume" "-l" "1.0" "@DEFAULT_AUDIO_SINK@" "0.05+"; }
-    XF86AudioLowerVolume allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "0.05-"; }
-    XF86AudioMute        allow-when-locked=true { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle"; }
-    XF86AudioMicMute     allow-when-locked=true { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SOURCE@" "toggle"; }
-    XF86AudioPlay        allow-when-locked=true { spawn "playerctl" "play-pause"; }
+    XF86AudioRaiseVolume    allow-when-locked=true { spawn "wpctl" "set-volume" "-l" "1.0" "@DEFAULT_AUDIO_SINK@" "0.05+"; }
+    XF86AudioLowerVolume    allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "0.05-"; }
+    XF86AudioMute           allow-when-locked=true { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle"; }
+    XF86AudioMicMute        allow-when-locked=true { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SOURCE@" "toggle"; }
+
+    XF86AudioPlay           allow-when-locked=true { spawn "qs" "ipc" "call" "media" "togglePlayPause"; }
+    Shift+XF86AudioPlay     allow-when-locked=true { spawn "qs" "ipc" "call" "media" "nextPlayer"; }
     // Laptop Fn+P often emits KEY_PAUSE (XKB Pause), not XF86AudioPlay.
-    Pause                allow-when-locked=true { spawn "playerctl" "play-pause"; }
-    XF86AudioNext        allow-when-locked=true { spawn "playerctl" "next"; }
-    XF86AudioPrev        allow-when-locked=true { spawn "playerctl" "previous"; }
+    Pause                   allow-when-locked=true { spawn "qs" "ipc" "call" "media" "togglePlayPause"; }
+    Shift+Pause             allow-when-locked=true { spawn "qs" "ipc" "call" "media" "nextPlayer"; }
+    XF86AudioNext           allow-when-locked=true { spawn "qs" "ipc" "call" "media" "playNextTrack"; }
+    XF86AudioPrev           allow-when-locked=true { spawn "qs" "ipc" "call" "media" "playPreviousTrack"; }
 
     // -n clamps to at least 1 so the panel never goes fully black.
-    XF86MonBrightnessUp   allow-when-locked=true { spawn "brightnessctl" "-n" "set" "5%+"; }
-    XF86MonBrightnessDown allow-when-locked=true { spawn "brightnessctl" "-n" "set" "5%-"; }
+    XF86MonBrightnessUp     allow-when-locked=true { spawn "brightnessctl" "-n" "set" "5%+"; }
+    XF86MonBrightnessDown   allow-when-locked=true { spawn "brightnessctl" "-n" "set" "5%-"; }
 
     // Open/close the Overview: a zoomed-out view of workspaces and windows.
     // You can also move the mouse into the top-left hot corner,
