@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(quickshell --version)",
+      "Bash(niri --version)",
+      "WebFetch(domain:quickshell.org)",
+      "WebFetch(domain:niri-wm.github.io)"
+    ]
+  }
+}

@@ -4,7 +4,7 @@ Guidance for AI agents working in this repo. See `README.md` for user-facing doc
 
 ## What this is
 
-A [Quickshell](https://quickshell.outfoxxed.me/) (QML) desktop shell for the [niri](https://github.com/YaLTeR/niri) compositor: bar, launcher panel, notifications, OSD, wallpaper, theme switcher, lockscreen — plus a standalone greetd greeter that shares its theming/UI atoms with the main shell.
+A [Quickshell](https://quickshell.org/) (QML) desktop shell for the [niri](https://github.com/niri-wm/niri) compositor: bar, launcher panel, notifications, OSD, wallpaper, theme switcher, lockscreen — plus a standalone greetd greeter that shares its theming/UI atoms with the main shell.
 
 ## Project priority: portability
 
