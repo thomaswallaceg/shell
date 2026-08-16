@@ -1,6 +1,6 @@
 # quickshell (niri)
 
-Personal [Quickshell](https://quickshell.outfoxxed.me/) desktop shell for [niri](https://github.com/YaLTeR/niri): status bar, launcher panel, notifications, and OSD.
+Personal [Quickshell](https://quickshell.org/) desktop shell for [niri](https://github.com/niri-wm/niri): status bar, launcher panel, notifications, and OSD.
 
 ## What's included
 
@@ -50,8 +50,8 @@ Launcher action **Set wallpaper** (search “wallpaper”) opens a Zenity file d
 
 ### Required
 
-- [Quickshell](https://quickshell.outfoxxed.me/) (Qt 6)
-- [niri](https://github.com/YaLTeR/niri)
+- [Quickshell](https://quickshell.org/) (Qt 6)
+- [niri](https://github.com/niri-wm/niri)
 - A *Propo* [Nerd Font](https://www.nerdfonts.com/) — this config defaults to **CodeNewRoman Nerd Font Propo** (`ThemeEngine.fontFamily`)
 - [alacritty](https://alacritty.org/) (or change `Niri.terminal` in `shell/services/Niri.qml`)
 

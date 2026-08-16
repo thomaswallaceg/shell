@@ -7,7 +7,7 @@ import QtQuick
 // Niri has no bundled Quickshell module (unlike Hyprland/i3), so this talks to
 // niri's own JSON IPC directly: `niri msg --json ...` for one-shot queries, and
 // a long-running `niri msg --json event-stream` for live updates. See:
-// https://yalter.github.io/niri/niri_ipc/ (or `niri msg --help`)
+// https://niri-wm.github.io/niri/niri_ipc/ (or `niri msg --help`)
 Singleton {
   id: root
 
