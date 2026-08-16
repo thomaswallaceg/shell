@@ -81,7 +81,9 @@ For Qt apps to follow qt6ct, the session needs `QT_QPA_PLATFORMTHEME=qt6ct` (e.g
 | Network | `wlctl` |
 | Bluetooth | `bluetui` |
 | Volume | `wiremix` |
-| Clock | `minical` |
+| Clock | `callie` |
+
+`callie` is this repo's own project (a git submodule, `callie/`) — build+install it with `./install.sh rust`. `wlctl` and `bluetui` are third-party crates from crates.io, installed the same way via `cargo install`. `btop`/`wiremix` come from your distro's package manager and are out of scope for `install.sh`.
 
 ### Launcher extras
 
@@ -128,8 +130,10 @@ shell/                 the main Quickshell config (its own shell.qml)
   services/            Niri, SystemInfo, Time, Displays
   common                symlink -> ../common
 greeter/               separate config for greetd (own shell.qml, common symlink -> ../common)
+callie/                git submodule: TUI calendar app, built by install.sh rust
 systemd/               optional systemd user units (symlinked by install.sh; see below)
-install.sh             optional setup script: systemd units + greeter/greetd deployment
+install.sh             optional setup script dispatcher: utils | shell | greeter | rust | all
+install/               setup script parts: lib.sh (helpers), utils.sh, shell.sh, greeter.sh, rust.sh
 ```
 
 `shell/` and `greeter/` each reach `common/` through a single `common` symlink — Quickshell sandboxes QML module resolution to each config's own directory, so a symlink *inside* the config folder is required (see `AGENTS.md` for the full explanation). QML files import modules with `import qs.<path>` (e.g. `import qs.common.theme`). Don't break these symlinks when moving files around; if you need to reuse something else across configs, move the real file into `common/`.
@@ -148,22 +152,35 @@ install.sh             optional setup script: systemd units + greeter/greetd dep
 
 ## Setup script (`install.sh`)
 
-`./install.sh` automates the machine-level integrations below:
-
-- **Step 0 — dependency check**: reports which of the project's CLI tools are on `PATH` (`[ok]` / `[missing]`), mirroring the tools the QML actually invokes (`brightnessctl`, `fd`, `wlctl`, …) plus this script's own helpers (`systemctl`, `rsync`, `swayidle`, `greetd`, `cage`, …). Non-fatal — most are per-widget/feature. Stacks consumed only via Quickshell modules (NetworkManager, UPower, power-profiles-daemon, PipeWire, BlueZ, PAM) are listed in the tables above, not here. Steps 1–3 do not re-check these; a missing required tool just fails the command under `set -e`.
-- **Step 1 — niri config symlink**: symlinks `~/.config/niri` to this checkout's `niri/` for the *current* user (backing up any pre-existing real directory first, after confirming). Run the script as each user who should log into niri via this repo's config — it's deliberately per-user rather than a single machine-wide path, so multiple accounts on one machine (including one shared by a single greeter) each resolve their own `~/.config/niri` independently.
-- **Step 2 — systemd units**: symlinks `systemd/quickshell.service` and `systemd/swayidle.service` into `~/.config/systemd/user/`, and writes `~/.config/quickshell/session.env` with this checkout's `QS_CONFIG_PATH` (niri's own `environment {}` block only reaches processes niri spawns directly, not independently-started systemd units). Then `daemon-reload`s and wires them to start alongside `niri.service`. This runs quickshell and the lockscreen's idle daemon (`swayidle`) as systemd **user** services tied to `graphical-session.target` instead of niri's own `spawn-at-startup` — you get `Restart=on-failure` and `systemctl --user status/restart/...` for both, at the cost of this one setup step per machine.
-- **Step 3 — greeter deployment**: deploys `common/` + `greeter/` to `/etc/quickshell/` (readable by the `greeter` system user, which usually can't see your home directory), symlinks [`greeter/config.toml`](greeter/config.toml) to `/etc/greetd/config.toml` (prompts before replacing a pre-existing real file), and enables `greetd`.
-
-Run it any time the checkout changes location (it rewrites `session.env` and refreshes the symlinks), from the repo root:
+`./install.sh` is a small dispatcher over `install/{lib,utils,shell,greeter,rust}.sh`. Pick which part to run with a subcommand (default `all`):
 
 ```bash
-./install.sh
+./install.sh          # same as `all`
+./install.sh utils    # dependency check only
+./install.sh shell    # niri symlink + systemd units only
+./install.sh greeter  # greetd/cage deployment only
+./install.sh rust     # build callie (submodule) + cargo-install wlctl/bluetui
 ```
 
+- **`utils`** (`install/utils.sh`): reports which of the project's CLI tools are on `PATH` (`[ok]` / `[missing]`), mirroring the tools the QML actually invokes (`brightnessctl`, `fd`, `wlctl`, …) plus the `shell`/`greeter`/`rust` parts' own helpers (`systemctl`, `rsync`, `swayidle`, `greetd`, `cage`, `cargo`, …). Non-fatal — most are per-widget/feature. Stacks consumed only via Quickshell modules (NetworkManager, UPower, power-profiles-daemon, PipeWire, BlueZ, PAM) are listed in the tables above, not here. `shell`/`greeter`/`rust` do not re-check these; a missing required tool just fails the command under `set -e`.
+- **`shell`** (`install/shell.sh`):
+  - symlinks `~/.config/niri` to this checkout's `niri/` for the *current* user (backing up any pre-existing real directory first, after confirming). Run the script as each user who should log into niri via this repo's config — it's deliberately per-user rather than a single machine-wide path, so multiple accounts on one machine (including one shared by a single greeter) each resolve their own `~/.config/niri` independently.
+  - symlinks `systemd/quickshell.service` and `systemd/swayidle.service` into `~/.config/systemd/user/`, and writes `~/.config/quickshell/session.env` with this checkout's `QS_CONFIG_PATH` (niri's own `environment {}` block only reaches processes niri spawns directly, not independently-started systemd units). Then `daemon-reload`s and wires them to start alongside `niri.service`. This runs quickshell and the lockscreen's idle daemon (`swayidle`) as systemd **user** services tied to `graphical-session.target` instead of niri's own `spawn-at-startup` — you get `Restart=on-failure` and `systemctl --user status/restart/...` for both, at the cost of this one setup step per machine.
+- **`greeter`** (`install/greeter.sh`): deploys `common/` + `greeter/` to `/etc/quickshell/` (readable by the `greeter` system user, which usually can't see your home directory), symlinks [`greeter/config.toml`](greeter/config.toml) to `/etc/greetd/config.toml` (prompts before replacing a pre-existing real file), and enables `greetd`.
+- **`rust`** (`install/rust.sh`): checks out this repo's `callie/` git submodule, builds it with `cargo build --release`, and installs the resulting binary to `/usr/local/bin/callie` (needs `sudo`). Also builds the two third-party crates.io TUI tools `wlctl`/`bluetui` unprivileged into a persistent cache dir (`${XDG_CACHE_HOME:-$HOME/.cache}/shell-install/cargo-root`, so re-runs get incremental rebuilds), then installs both binaries to `/usr/local/bin` the same way — so all three bar TUI helpers live in one system-wide location rather than a per-user `~/.cargo/bin`. Drops any pre-existing plain `cargo install` copies from `~/.cargo/bin` first, so there's exactly one copy of each on `PATH`. `btop`/`wiremix` are left to your distro's package manager and aren't touched by this step.
+
+  **One-time prerequisite**, before `rust` can build `callie` for the first time: `install.sh` never edits `.gitmodules` itself, so add the submodule once from the repo root:
+  ```bash
+  git submodule add https://github.com/thomaswallaceg/callie.git callie
+  git commit -m "Add callie as a submodule"
+  ```
+  (Use `https://`, not `git@` — it works anonymously against a public repo on any machine, without that machine needing GitHub SSH keys configured.) After that one-time commit, a fresh `git clone` of this repo — even without `--recurse-submodules` — followed by `./install.sh rust` still works: the step runs `git submodule update --init --recursive` automatically every time. If the submodule hasn't been added yet, `rust` warns and skips the `callie` build rather than failing.
+
+Run it any time the checkout changes location (it rewrites `session.env` and refreshes the symlinks), from the repo root.
+
 Two things it can't do for you:
-- **Remove `spawn-at-startup "quickshell"` from `niri/main.kdl`** after step 2 — leaving it in starts quickshell twice.
-- **The systemd step needs `niri.service` to still pull in `graphical-session.target`** (`BindsTo=graphical-session.target` / `Before=graphical-session.target` in the packaged unit) — if you have a **full override** at `~/.config/systemd/user/niri.service` rather than a `niri.service.d/*.conf` drop-in, double check it didn't drop those lines; a full override *replaces* the packaged unit instead of merging with it.
+- **Remove `spawn-at-startup "quickshell"` from `niri/main.kdl`** after the `shell` part — leaving it in starts quickshell twice.
+- **The `shell` part needs `niri.service` to still pull in `graphical-session.target`** (`BindsTo=graphical-session.target` / `Before=graphical-session.target` in the packaged unit) — if you have a **full override** at `~/.config/systemd/user/niri.service` rather than a `niri.service.d/*.conf` drop-in, double check it didn't drop those lines; a full override *replaces* the packaged unit instead of merging with it.
 
 ## Greeter (greetd)
 
@@ -171,7 +188,7 @@ Two things it can't do for you:
 
 ### Setup
 
-Install `greetd` and a minimal kiosk Wayland compositor to host the greeter, e.g. [cage](https://github.com/cage-kiosk/cage), then run [`./install.sh`](#setup-script-installsh) as **each user** who should be able to log in this way — its niri-symlink step (1) and greeter deployment step (3) both need to run per-user/per-machine respectively; see below.
+Install `greetd` and a minimal kiosk Wayland compositor to host the greeter, e.g. [cage](https://github.com/cage-kiosk/cage), then run [`./install.sh`](#setup-script-installsh) as **each user** who should be able to log in this way — its `shell` part (niri symlink) and `greeter` part (deployment) both need to run per-user/per-machine respectively; see below.
 
 To do it by hand instead:
 1. Symlink `~/.config/niri` to this repo's `niri/` for each user who logs in via this greeter (this is what makes login work for more than one account — see the note below):

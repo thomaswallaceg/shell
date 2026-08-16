@@ -1,0 +1,3 @@
+[submodule "callie"]
+	path = callie
+	url = https://github.com/thomaswallaceg/callie.git
