@@ -25,6 +25,7 @@ check_dependencies() {
         "wiremix|Bar volume click-through"
         "callie|Bar clock click-through"
         "cargo|Rust toolchain (this script's rust step: cargo build/install)"
+        "curl|crates.io version-pin check (this script's rust step, non-fatal if missing)"
         "xdg-open|Launcher file/directory opening"
         "fd|Launcher file search"
         "zenity|Wallpaper file picker (launcher / qs ipc wallpaper pick)"
