@@ -4,6 +4,7 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 import qs.common.theme
+import qs.common.state
 
 // Loads palettes, tracks the active one, persists selection, and owns shell-wide
 // typography. Palette colors live on the Theme singleton; engine API on ThemeEngine.* .
@@ -61,16 +62,15 @@ Singleton {
             return;
         previewFontFamily = "";
         savedFontFamily = name;
-        fontConfFile.setText(name);
+        Preferences.fontFamily = name;
     }
 
     function saveTheme(theme) {
-        themeConfFile.setText(theme.id);
+        Preferences.theme = theme.id;
     }
 
     function applySavedTheme() {
-        const rawId = themeConfFile.text().trim();
-        const theme = root.findThemeById(rawId) || root.themes[0];
+        const theme = root.findThemeById(Preferences.theme) || root.themes[0];
         if (!theme)
             return;
         root.currentId = theme.id;
@@ -78,9 +78,8 @@ Singleton {
     }
 
     function applySavedFont() {
-        const name = fontConfFile.text().trim();
-        if (name !== "")
-            root.savedFontFamily = name;
+        if (Preferences.fontFamily !== "")
+            root.savedFontFamily = Preferences.fontFamily;
     }
 
     function applyColorScheme(theme) {
@@ -117,21 +116,15 @@ Singleton {
 
     Process { id: colorSchemeProc; running: false }
 
-    // themeConfFile and themesFile load asynchronously and independently, so
+    // Preferences and themesFile load asynchronously and independently, so
     // either can finish first — applySavedTheme() needs a chance to run from
-    // both onTextChanged handlers (it's a safe no-op if themes aren't parsed
-    // yet, or if the conf file hasn't loaded yet, since findThemeById/[0]
-    // both come back empty/undefined in that case).
-    FileView {
-        id: themeConfFile
-        path: Quickshell.statePath("theme.conf")
-        onTextChanged: root.applySavedTheme()
-    }
-
-    FileView {
-        id: fontConfFile
-        path: Quickshell.statePath("font.conf")
-        onTextChanged: root.applySavedFont()
+    // both onThemeChanged and themesFile's onTextChanged (it's a safe no-op
+    // if themes aren't parsed yet, or if Preferences hasn't loaded yet,
+    // since findThemeById/[0] both come back empty/undefined in that case).
+    Connections {
+        target: Preferences
+        function onThemeChanged() { root.applySavedTheme(); }
+        function onFontFamilyChanged() { root.applySavedFont(); }
     }
 
     FileView {

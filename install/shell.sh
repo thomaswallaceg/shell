@@ -24,7 +24,16 @@ install_systemd_units() {
     mkdir -p "$env_dir" "$unit_dir"
     # Specifiers like %E in the unit files resolve to XDG_CONFIG_HOME (or
     # ~/.config); keep this path in lockstep with EnvironmentFile=%E/quickshell/session.env.
-    printf 'QS_CONFIG_PATH=%s\n' "$shell_path" > "$env_file"
+    # XCURSOR_THEME/SIZE: quickshell.service doesn't inherit niri's own
+    # environment{} block (see that unit's comment) or niri's built-in
+    # XCURSOR env vars, so without these the lockscreen falls back to an
+    # unthemed cursor while loading. Detected from the live GTK setting
+    # rather than hardcoded, so this stays in sync if it's ever changed.
+    {
+        printf 'QS_CONFIG_PATH=%s\n' "$shell_path"
+        printf 'XCURSOR_THEME=%s\n' "$(detect_cursor_theme)"
+        printf 'XCURSOR_SIZE=%s\n' "$(detect_cursor_size)"
+    } > "$env_file"
     echo "Wrote $env_file"
 
     for unit in "${units[@]}"; do

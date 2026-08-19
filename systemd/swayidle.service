@@ -1,18 +1,24 @@
 [Unit]
-Description=Idle management (auto-lock, display power, suspend via swayidle)
+Description=Lock before sleep / power monitors on resume (swayidle)
 PartOf=graphical-session.target
 After=graphical-session.target
 Requisite=graphical-session.target
 
 [Service]
-# Needed so the `qs ipc call ...` commands below resolve to the running
+# Needed so the `qs ipc call ...` command below resolves to the running
 # quickshell instance — see the comment in quickshell.service.
 EnvironmentFile=%E/quickshell/session.env
+# No `timeout` stages here — those live in shell/services/IdleManager.qml,
+# via Quickshell's own ext-idle-notify-v1 wrapper. This unit only exists for
+# swayidle's `after-resume`/`before-sleep` hooks, which key off logind's
+# PrepareForSleep DBus signal — nothing in Quickshell wraps that, and
+# before-sleep is the only thing that locks the screen before a suspend
+# IdleManager didn't trigger itself (e.g. logind's own lid-close handling).
+# Note: plain `resume` (as opposed to `after-resume`) is NOT a standalone
+# event in swayidle's grammar — it's only valid as a `timeout <n> <cmd>
+# resume <cmd>` modifier, which is why this needs `after-resume` instead.
 ExecStart=/usr/bin/swayidle -w \
-    timeout 300 '/usr/bin/qs ipc call lockscreen lock' \
-    timeout 330 '/usr/bin/niri msg action power-off-monitors' \
-    timeout 600 '/usr/bin/systemctl suspend' \
-    resume '/usr/bin/niri msg action power-on-monitors' \
+    after-resume '/usr/bin/niri msg action power-on-monitors' \
     before-sleep '/usr/bin/qs ipc call lockscreen lock'
 Restart=on-failure
 RestartSec=1

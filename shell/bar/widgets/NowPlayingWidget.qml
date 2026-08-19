@@ -34,7 +34,7 @@ BarPill {
       width: 8
     }
 
-    Text {
+    ScrollingText {
       anchors.verticalCenter: parent.verticalCenter
       text: {
         if (!Mpris.activePlayer) return "";
@@ -45,8 +45,7 @@ BarPill {
       color: Theme.textPrimary
       font.pixelSize: ThemeEngine.fontSizeLg
       font.family: ThemeEngine.fontFamily
-      elide: Text.ElideRight
-      width: Math.min(implicitWidth, 200)
+      maxWidth: 200
     }
   }
 

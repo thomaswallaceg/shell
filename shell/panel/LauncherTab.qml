@@ -9,6 +9,7 @@ import qs.common.theme
 import qs.common.power
 import qs.wallpaper
 import qs.panel
+import qs.services
 
 Item {
     id: root
@@ -16,6 +17,8 @@ Item {
     signal closeRequested()
 
     readonly property int fileSearchMinLength: 3
+    // Launcher only fits ~5-6 rows without scrolling — 20 was just noise.
+    readonly property int fileSearchMaxResults: 10
 
     property var fileResults: []
     property bool fileSearching: false
@@ -117,6 +120,24 @@ Item {
             action: "wallpaper"
         },
         {
+            id: "__action__coffee",
+            kind: "action",
+            name: CoffeeMode.enabled ? "Coffee mode: On" : "Coffee mode: Off",
+            genericName: "Toggle keeping the system awake",
+            keywords: ["coffee", "caffeinate", "keep awake", "inhibit", "idle", "presentation"],
+            glyph: "󰅶",
+            action: "coffee-mode"
+        },
+        {
+            id: "__action__sync_greeter_theme",
+            kind: "action",
+            name: "Sync theme to greeter",
+            genericName: "Copy the current theme and font to the login screen",
+            keywords: ["greeter", "sync", "theme", "font", "login", "greetd"],
+            glyph: "󰓦",
+            action: "sync-greeter-theme"
+        },
+        {
             id: "__action__theme",
             kind: "shell_panel_action",
             name: "Set theme",
@@ -140,6 +161,7 @@ Item {
         panelTab.clearSearch();
         panelTab.selectedIndex = -1;
         clearFileSearch();
+        Calculator.clear();
     }
 
     function activeMprisPlayer() {
@@ -227,6 +249,22 @@ Item {
             case "wallpaper":
                 WallpaperController.pick();
                 break;
+            case "coffee-mode":
+                CoffeeMode.toggle();
+                break;
+            case "sync-greeter-theme":
+                // Elevates via pkexec — the greeter's state dir is owned by
+                // its own system user (root/greeter), not this session's
+                // user. See sync-greeter-preferences.sh for why it's safe to
+                // compute the greeter's state path without asking a running
+                // greeter process for it.
+                Quickshell.execDetached([
+                    "pkexec",
+                    Quickshell.shellPath("scripts/sync-greeter-preferences.sh"),
+                    ThemeEngine.currentId,
+                    ThemeEngine.savedFontFamily
+                ]);
+                break;
             case "theme":
                 Quickshell.execDetached(["qs", "ipc", "call", "theme", "toggle"]);
                 break;
@@ -259,7 +297,7 @@ Item {
     function parseFileResults(text) {
         const lines = text.trim() === ""
             ? []
-            : text.trim().split("\n").filter(line => line.length > 0);
+            : text.trim().split("\n").filter(line => line.length > 0).slice(0, root.fileSearchMaxResults);
 
         return lines.map((line, i) => {
             const isDir = line.startsWith("d:");
@@ -299,11 +337,21 @@ Item {
         fileSearching = true;
 
         const home = Quickshell.env("HOME") || ".";
+        // "*"/"?"/"[" -> glob matching instead of a literal substring, so
+        // e.g. "*.qml" or "foo?ar" work as expected.
+        const matchFlag = /[*?[]/.test(pattern) ? "-g" : "-F";
+        // A "/" in the query means they're narrowing by path (e.g.
+        // "projects/foo"), not just a filename — fd only matches filenames
+        // by default, so a path fragment would otherwise silently match
+        // nothing. Left off for slash-less queries so a common word doesn't
+        // suddenly match every file under a same-named directory.
+        const pathFlag = pattern.includes("/") ? "-p" : "";
+        const cap = root.fileSearchMaxResults;
         // Visible matches first, then hidden-only paths underneath (still capped).
-        // Pattern/home as $1/$2 to avoid injection.
+        // Pattern/home/flags as $1.. to avoid injection.
         fileSearchProc.command = [
             "sh", "-c",
-            'pattern="$1"; home="$2"; ' +
+            'pattern="$1"; home="$2"; match_flag="$3"; path_flag="$4"; cap="$5"; ' +
             'tag() { while IFS= read -r p; do [ -d "$p" ] && echo "d:$p" || echo "f:$p"; done; }; ' +
             'is_hidden() { ' +
             '  oldifs=$IFS; IFS=/; ' +
@@ -314,10 +362,10 @@ Item {
             '  done; ' +
             '  IFS=$oldifs; return 1; ' +
             '}; ' +
-            'fd --type f --type d --fixed-strings --max-results 20 -- "$pattern" "$home" | tag; ' +
-            'fd --hidden --type f --type d --fixed-strings --max-results 40 -- "$pattern" "$home" | ' +
-            'while IFS= read -r p; do is_hidden "$p" && echo "$p"; done | head -20 | tag',
-            "file-search", pattern, home
+            'fd --type f --type d "$match_flag" $path_flag --max-results "$cap" -- "$pattern" "$home" | tag; ' +
+            'fd --hidden --type f --type d "$match_flag" $path_flag --max-results "$((cap * 2))" -- "$pattern" "$home" | ' +
+            'while IFS= read -r p; do is_hidden "$p" && echo "$p"; done | head -"$cap" | tag',
+            "file-search", pattern, home, matchFlag, pathFlag, String(cap)
         ];
         fileSearchProc.generation = gen;
         fileSearchProc.running = false;
@@ -342,41 +390,6 @@ Item {
             command: command,
             icon: ""
         };
-    }
-
-    // Simple calculator: only digits and basic arithmetic, evaluated via a
-    // strict Function so arbitrary JS can't sneak in through the search box.
-    function tryCalculate(query) {
-        const expr = query.trim().replace(/\s+/g, "");
-        if (expr === "")
-            return null;
-        // Need at least one digit and one operator — plain "42" / app names stay as search.
-        if (!/[0-9]/.test(expr) || !/[+\-*/%^]/.test(expr))
-            return null;
-        if (!/^[0-9+\-*/().,%^]+$/.test(expr))
-            return null;
-
-        try {
-            const normalized = expr.replace(/\^/g, "**").replace(/,/g, "");
-            const value = new Function(`"use strict"; return (${normalized});`)();
-            if (typeof value !== "number" || !isFinite(value))
-                return null;
-
-            const display = Number.isInteger(value)
-                ? String(value)
-                : String(parseFloat(value.toPrecision(12)));
-
-            return {
-                id: "__calc__",
-                kind: "calc",
-                name: "= " + display,
-                genericName: "Copy result to clipboard",
-                result: display,
-                icon: ""
-            };
-        } catch (e) {
-            return null;
-        }
     }
 
     function formatResultCount() {
@@ -487,6 +500,15 @@ Item {
     Connections {
         target: panelTab
         function onSearchTextChanged() {
+            // ">" (run mode) and "?" (files-only) never show a calc entry
+            // (see the ScriptModel's values: binding) — no point spawning
+            // qalc for text in either of those modes.
+            const trimmed = panelTab.searchText.trim();
+            if (trimmed.startsWith(">") || trimmed.startsWith("?"))
+                Calculator.clear();
+            else
+                Calculator.evaluate(panelTab.searchText);
+
             const fileQuery = root.resolveFileSearch(panelTab.searchText);
             if (!fileQuery.active) {
                 root.clearFileSearch();
@@ -536,7 +558,14 @@ Item {
                 });
             }
 
-            const calc = root.tryCalculate(raw);
+            const calc = Calculator.hasResult ? {
+                id: "__calc__",
+                kind: "calc",
+                name: "= " + Calculator.result,
+                genericName: "Copy result to clipboard",
+                result: Calculator.result,
+                icon: ""
+            } : null;
             // Interleave actions with apps by name relevance so a single
             // letter doesn't pin every loosely matched action above apps.
             const actions = q === "" ? [] : root.matchingActions(raw);
