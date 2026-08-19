@@ -7,6 +7,24 @@ deploy_greeter_files() {
     # greeter runs before login (encrypted homes aren't unlocked yet).
     sudo mkdir -p /etc/quickshell
     sudo rsync -a --delete --verbose "$REPO_ROOT/common" "$REPO_ROOT/greeter" /etc/quickshell/
+    deploy_greeter_run_script
+}
+
+# Generates the wrapper config.toml's command points at. Not checked in
+# (rsync --delete above would just remove it again) — it embeds the cursor
+# theme detected from the current GTK setting, so cage/Quickshell don't fall
+# back to an unthemed cursor while the greeter is loading, without pinning
+# this repo's checked-in files to any specific theme.
+deploy_greeter_run_script() {
+    local run_script=/etc/quickshell/greeter/run.sh
+    sudo tee "$run_script" > /dev/null <<EOF
+#!/bin/sh
+export XCURSOR_THEME="$(detect_cursor_theme)"
+export XCURSOR_SIZE="$(detect_cursor_size)"
+exec cage -s -d -- qs -p /etc/quickshell/greeter
+EOF
+    sudo chmod 755 "$run_script"
+    echo "Wrote $run_script"
 }
 
 configure_greetd() {

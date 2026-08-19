@@ -4,6 +4,28 @@ warn() {
     echo "(!) $*" >&2
 }
 
+# Read the cursor theme/size the user actually has configured (GTK's
+# org.gnome.desktop.interface, same source ThemeEngine already reads for
+# light/dark). Used to fill in XCURSOR_THEME/XCURSOR_SIZE for processes that
+# don't get niri's own env vars for free (systemd user units, the greeter's
+# separate cage session) without pinning this repo to any specific theme.
+# Falls back to niri's own defaults ("default", 24) if gsettings has nothing.
+detect_cursor_theme() {
+    local theme
+    theme=$(gsettings get org.gnome.desktop.interface cursor-theme 2>/dev/null | sed "s/^'//; s/'$//")
+    [ -n "$theme" ] || theme="default"
+    echo "$theme"
+}
+
+detect_cursor_size() {
+    local size
+    size=$(gsettings get org.gnome.desktop.interface cursor-size 2>/dev/null)
+    case "$size" in
+        ''|*[!0-9]*) size=24 ;;
+    esac
+    echo "$size"
+}
+
 # Make LINK_PATH a symlink to TARGET_PATH.
 # With a third argument of "force", replace a pre-existing non-symlink without
 # asking (used for files this script exclusively manages). Otherwise prompt

@@ -46,6 +46,8 @@ qs ipc call wallpaper pick
 
 Launcher action **Set wallpaper** (search “wallpaper”) opens a Zenity file dialog and applies the chosen image.
 
+Launcher action **Sync theme to greeter** (search “greeter”) copies the current theme + font into the greeter's own `preferences.json` (see `common/state/Preferences.qml`) via `shell/scripts/sync-greeter-preferences.sh`, run through `pkexec` since that file is owned by the separate `greeter` system user. The greeter is a separate Quickshell config root, so it doesn't share the main shell's saved preferences on its own (see `AGENTS.md`'s theme sync note) — this is a one-shot manual copy, not a live sync. No wallpaper equivalent yet; the greeter doesn't currently render one.
+
 ## Dependencies
 
 ### Required
@@ -91,10 +93,13 @@ For Qt apps to follow qt6ct, the session needs `QT_QPA_PLATFORMTHEME=qt6ct` (e.g
 |------|----------|
 | `xdg-open` (`xdg-utils`) | Opening files / directories |
 | `fd` | File / directory search |
+| `qalc` (`libqalculate`) | Calculator — implicit multiplication, functions, units, etc. (`shell/services/Calculator.qml`) |
 | `systemctl` | Power actions (suspend / reboot / shut down) |
 | `systemd-inhibit` | Reboot/shutdown confirm when apps hold logind inhibitors |
 | MPRIS (via Quickshell) | Play / pause / next / previous actions |
 | PipeWire (via Quickshell) | Toggle mute action |
+| `pkexec` | **Sync theme to greeter** action (privilege escalation) |
+| `jq` | **Sync theme to greeter** action (`sync-greeter-preferences.sh`'s JSON edit) |
 
 ### Lockscreen
 
@@ -148,7 +153,7 @@ install/               setup script parts: lib.sh (helpers), utils.sh, shell.sh,
   ```bash
   qs ipc call lockscreen lock
   ```
-  There's intentionally no matching `unlock` IPC call — the only way out is a successful PAM authentication. A niri keybind for this, and a ready-to-use `swayidle` idle sequence (lock → power off displays → suspend), are set up by [`./install.sh`](#setup-script-installsh)'s systemd step; wire the keybind into `niri/keybinds.kdl` if it isn't already.
+  There's intentionally no matching `unlock` IPC call — the only way out is a successful PAM authentication. A niri keybind for this, and idle-triggered auto-lock (see `shell/services/IdleManager.qml`), are set up by [`./install.sh`](#setup-script-installsh)'s systemd step; wire the keybind into `niri/keybinds.kdl` if it isn't already.
 
 ## Setup script (`install.sh`)
 
@@ -165,7 +170,8 @@ install/               setup script parts: lib.sh (helpers), utils.sh, shell.sh,
 - **`utils`** (`install/utils.sh`): reports which of the project's CLI tools are on `PATH` (`[ok]` / `[missing]`), mirroring the tools the QML actually invokes (`brightnessctl`, `fd`, `wlctl`, …) plus the `shell`/`greeter`/`rust` parts' own helpers (`systemctl`, `rsync`, `swayidle`, `greetd`, `cage`, `cargo`, …). Non-fatal — most are per-widget/feature. Stacks consumed only via Quickshell modules (NetworkManager, UPower, power-profiles-daemon, PipeWire, BlueZ, PAM) are listed in the tables above, not here. `shell`/`greeter`/`rust` do not re-check these; a missing required tool just fails the command under `set -e`.
 - **`shell`** (`install/shell.sh`):
   - symlinks `~/.config/niri` to this checkout's `niri/` for the *current* user (backing up any pre-existing real directory first, after confirming). Run the script as each user who should log into niri via this repo's config — it's deliberately per-user rather than a single machine-wide path, so multiple accounts on one machine (including one shared by a single greeter) each resolve their own `~/.config/niri` independently.
-  - symlinks `systemd/quickshell.service` and `systemd/swayidle.service` into `~/.config/systemd/user/`, and writes `~/.config/quickshell/session.env` with this checkout's `QS_CONFIG_PATH` (niri's own `environment {}` block only reaches processes niri spawns directly, not independently-started systemd units). Then `daemon-reload`s and wires them to start alongside `niri.service`. This runs quickshell and the lockscreen's idle daemon (`swayidle`) as systemd **user** services tied to `graphical-session.target` instead of niri's own `spawn-at-startup` — you get `Restart=on-failure` and `systemctl --user status/restart/...` for both, at the cost of this one setup step per machine.
+  - symlinks `systemd/quickshell.service` and `systemd/swayidle.service` into `~/.config/systemd/user/`, and writes `~/.config/quickshell/session.env` with this checkout's `QS_CONFIG_PATH` and the detected `XCURSOR_THEME`/`XCURSOR_SIZE` (niri's own `environment {}` block only reaches processes niri spawns directly, not independently-started systemd units — same reason the greeter gets its own generated `run.sh`, see `install/greeter.sh`). Then `daemon-reload`s and wires both to start alongside `niri.service`. This runs quickshell as a systemd **user** service tied to `graphical-session.target` instead of niri's own `spawn-at-startup` — you get `Restart=on-failure` and `systemctl --user status/restart/...`, at the cost of this one setup step per machine.
+  - Idle-triggered lock / display power-off / suspend is handled by the shell itself, not `swayidle` — see `shell/services/IdleManager.qml`, wired into `shell.qml`. It wraps Quickshell's own `IdleMonitor` (`ext-idle-notify-v1`, the same Wayland protocol `swayidle` uses) with timeouts bound live to `Quickshell.Services.UPower`'s `onBattery`: a tighter set (lock/monitors-off/suspend at 5/5.5/10 min) on battery, relaxed (15/16/30 min) otherwise — and since it's a live QML binding rather than a value picked once at process start, plugging in or unplugging takes effect immediately, no restart needed. `swayidle.service` still runs, but stripped to just its `resume`/`before-sleep` hooks — those key off logind's `PrepareForSleep` DBus signal, which nothing in Quickshell wraps, and `before-sleep` is the only thing locking the screen before a suspend `IdleManager` didn't itself trigger (e.g. logind's own `HandleLidSwitch=suspend` default on lid close).
 - **`greeter`** (`install/greeter.sh`): deploys `common/` + `greeter/` to `/etc/quickshell/` (readable by the `greeter` system user, which usually can't see your home directory), symlinks [`greeter/config.toml`](greeter/config.toml) to `/etc/greetd/config.toml` (prompts before replacing a pre-existing real file), and enables `greetd`.
 - **`rust`** (`install/rust.sh`): checks out this repo's `callie/` git submodule, builds it with `cargo build --release`, and installs the resulting binary to `/usr/local/bin/callie` (needs `sudo`). Also builds the two third-party crates.io TUI tools `wlctl`/`bluetui`, pinned to known-good versions (`WLCTL_VERSION`/`BLUETUI_VERSION` at the top of `install/rust.sh`, e.g. `wlctl@0.1.9`) rather than tracked at latest — same reproducibility goal as `callie`'s pinned submodule commit, just via a plain version string instead of a git SHA since these aren't part of this repo. Built unprivileged into a persistent cache dir (`${XDG_CACHE_HOME:-$HOME/.cache}/shell-install/cargo-root`, so re-runs get incremental rebuilds), then installed to `/usr/local/bin` the same way as `callie` — so all three bar TUI helpers live in one system-wide location rather than a per-user `~/.cargo/bin`. Drops any pre-existing plain `cargo install` copies from `~/.cargo/bin` first, so there's exactly one copy of each on `PATH`. Before installing, it checks crates.io for a newer release of each pinned tool and prints a non-fatal warning if one exists (never bumps the pin itself — that's a deliberate edit + commit to `install/rust.sh`, same as bumping the `callie` submodule). `btop`/`wiremix` are left to your distro's package manager and aren't touched by this step.
 

@@ -3,6 +3,7 @@ pragma Singleton
 import Quickshell
 import Quickshell.Io
 import QtQuick
+import qs.common.state
 
 Singleton {
   id: root
@@ -14,7 +15,7 @@ Singleton {
     if (trimmed === root.source)
       return;
     root.source = trimmed;
-    confFile.setText(trimmed);
+    Preferences.wallpaper = trimmed;
   }
 
   function clear() {
@@ -27,13 +28,11 @@ Singleton {
     pickProc.running = true;
   }
 
-  FileView {
-    id: confFile
-    path: Quickshell.statePath("wallpaper.conf")
-    onTextChanged: {
-      const text = confFile.text().trim();
-      if (text !== root.source)
-        root.source = text;
+  Connections {
+    target: Preferences
+    function onWallpaperChanged() {
+      if (Preferences.wallpaper !== root.source)
+        root.source = Preferences.wallpaper;
     }
   }
 

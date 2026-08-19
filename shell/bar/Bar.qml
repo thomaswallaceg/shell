@@ -148,6 +148,7 @@ Scope {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 8
 
+            CoffeeModeWidget {}
             VolumeWidget {}
             BrightnessWidget {}
             NetworkWidget {}
