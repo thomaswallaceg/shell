@@ -1,0 +1,2 @@
+# Left out of `make dist` / GitHub release tarballs (git archive).
+.claude export-ignore

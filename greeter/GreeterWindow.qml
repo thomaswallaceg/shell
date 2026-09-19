@@ -9,20 +9,11 @@ import qs.common.osd
 import qs.common.widgets
 import qs.common.power
 
-// Fullscreen login window. Meant to run standalone inside a minimal kiosk
-// compositor (cage) launched by greetd — see README.md for the greetd/cage
-// setup. Not wired into the main shell.qml; this is its own Quickshell config,
-// sharing theme/ and a couple of panel UI atoms with the main shell
-// via a single symlink into ../common/ (see AGENTS.md for why plain imports
-// can't reach outside this directory).
+// Fullscreen login window, run by greetd inside cage.
 FloatingWindow {
     id: window
 
-    // niri resolves its own config from ~/.config/niri/config.kdl for
-    // whichever user this session launches as, so this just needs to be a
-    // symlink to this repo's niri/ (see install.sh's link_niri_config, or
-    // README.md's manual setup) — no NIRI_CONFIG plumbing needed here.
-    property var sessionCommand: ["niri-session"]
+    property var sessionCommand: ["systemd-cat", "-t", "niri-session", "niri-session"]
 
     implicitWidth: screen ? screen.width : 1280
     implicitHeight: screen ? screen.height : 720

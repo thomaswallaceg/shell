@@ -25,7 +25,9 @@ qs -c shell
 # or: qs -p /path/to/this/repo/shell
 ```
 
-If this repo is checked out at `~/.config/quickshell`, niri's config sets `QS_CONFIG_NAME "shell"` (see `niri/main.kdl`), so plain `qs` / `quickshell` — and `spawn-at-startup "quickshell"`, `qs ipc call ...` — default to `shell` without needing `-c` every time.
+Once installed (`./install.sh shell` or `make install-shell`), the session runs the installed copy, `$PREFIX/share/thomas-shell/shell`. `make` also installs `$PREFIX/lib/environment.d/60-thomas-shell.conf`, which sets `QS_CONFIG_PATH` for your whole systemd user session. That's how `thomas-shell.service`, `thomas-shell-swayidle.service` and niri's `qs ipc call …` keybinds all find the same shell without passing `-p`.
+
+To develop, run the checkout by hand instead: `systemctl --user stop thomas-shell.service`, then `qs -p ./shell` from the repo, which hot-reloads on save. `qs ipc call …` from a terminal needs `-p ./shell` too while you do this, since `QS_CONFIG_PATH` still names the installed copy. `systemctl --user start thomas-shell.service` switches back.
 
 Config-relative assets use `Quickshell.shellPath(...)`. The active theme id is stored under Quickshell's per-shell state directory, so the checkout does not need to live in `~/.config/quickshell`.
 
@@ -46,7 +48,7 @@ qs ipc call wallpaper pick
 
 Launcher action **Set wallpaper** (search “wallpaper”) opens a Zenity file dialog and applies the chosen image.
 
-Launcher action **Sync theme to greeter** (search “greeter”) copies the current theme + font into the greeter's own `preferences.json` (see `common/state/Preferences.qml`) via `shell/scripts/sync-greeter-preferences.sh`, run through `pkexec` since that file is owned by the separate `greeter` system user. The greeter is a separate Quickshell config root, so it doesn't share the main shell's saved preferences on its own (see `AGENTS.md`'s theme sync note) — this is a one-shot manual copy, not a live sync. No wallpaper equivalent yet; the greeter doesn't currently render one.
+Launcher action **Sync greeter theme and font** (search “greeter”) copies your current theme and font to the login screen. Your own theme/font choices only ever change your shell and lockscreen; the greeter is shared by every user, so changing it needs an admin's password. The action runs `shell/scripts/sync-greeter-preferences.sh` through `pkexec`, which checks the theme exists and writes `/etc/thomas-shell/greeter.json`. The greeter reads that file (read-only) and picks up changes on its next start. `make install-shell` installs a polkit policy for the script, so the password prompt says what it's for. It's a one-shot copy, not a live sync. No wallpaper equivalent yet; the greeter doesn't currently render one.
 
 ## Dependencies
 
@@ -56,6 +58,7 @@ Launcher action **Sync theme to greeter** (search “greeter”) copies the curr
 - [niri](https://github.com/niri-wm/niri)
 - A *Propo* [Nerd Font](https://www.nerdfonts.com/) — this config defaults to **CodeNewRoman Nerd Font Propo** (`ThemeEngine.fontFamily`)
 - [alacritty](https://alacritty.org/) (or change `Niri.terminal` in `shell/services/Niri.qml`)
+- The **Adwaita** cursor theme (`adwaita-cursors` on Arch, `adwaita-icon-theme` on Debian/Fedora). niri, the session environment (`environment.d/60-thomas-shell.conf`) and the greeter all set it at size 24 so the cursor looks the same everywhere. Change it in `niri/windows.kdl`, `systemd/environment.d/60-thomas-shell.conf` and `greeter/config.toml` together.
 
 ### Bar / OSD / system services
 
@@ -98,8 +101,8 @@ For Qt apps to follow qt6ct, the session needs `QT_QPA_PLATFORMTHEME=qt6ct` (e.g
 | `systemd-inhibit` | Reboot/shutdown confirm when apps hold logind inhibitors |
 | MPRIS (via Quickshell) | Play / pause / next / previous actions |
 | PipeWire (via Quickshell) | Toggle mute action |
-| `pkexec` | **Sync theme to greeter** action (privilege escalation) |
-| `jq` | **Sync theme to greeter** action (`sync-greeter-preferences.sh`'s JSON edit) |
+| `pkexec` | **Sync greeter theme and font** action (privilege escalation) |
+| `jq` | **Sync greeter theme and font** action (`sync-greeter-preferences.sh`'s JSON edit) |
 
 ### Lockscreen
 
@@ -136,8 +139,10 @@ shell/                 the main Quickshell config (its own shell.qml)
   common                symlink -> ../common
 greeter/               separate config for greetd (own shell.qml, common symlink -> ../common)
 callie/                git submodule: TUI calendar app, built by install.sh rust
-systemd/               optional systemd user units (symlinked by install.sh; see below)
+systemd/               optional systemd user units (installed by make; see below)
 install.sh             optional setup script dispatcher: utils | shell | greeter | rust | all
+Makefile               `make install[-shell|-greeter|-units|-doc]`: plain files under a prefix
+polkit/                polkit action for the greeter theme sync script
 install/               setup script parts: lib.sh (helpers), utils.sh, shell.sh, greeter.sh, rust.sh
 ```
 
@@ -167,12 +172,12 @@ install/               setup script parts: lib.sh (helpers), utils.sh, shell.sh,
 ./install.sh rust     # build callie (submodule) + cargo-install wlctl/bluetui
 ```
 
-- **`utils`** (`install/utils.sh`): reports which of the project's CLI tools are on `PATH` (`[ok]` / `[missing]`), mirroring the tools the QML actually invokes (`brightnessctl`, `fd`, `wlctl`, …) plus the `shell`/`greeter`/`rust` parts' own helpers (`systemctl`, `rsync`, `swayidle`, `greetd`, `cage`, `cargo`, …). Non-fatal — most are per-widget/feature. Stacks consumed only via Quickshell modules (NetworkManager, UPower, power-profiles-daemon, PipeWire, BlueZ, PAM) are listed in the tables above, not here. `shell`/`greeter`/`rust` do not re-check these; a missing required tool just fails the command under `set -e`.
+- **`utils`** (`install/utils.sh`): reports which of the project's CLI tools are on `PATH` (`[ok]` / `[missing]`), mirroring the tools the QML actually invokes (`brightnessctl`, `fd`, `wlctl`, …) plus the `shell`/`greeter`/`rust` parts' own helpers (`systemctl`, `make`, `swayidle`, `greetd`, `cage`, `cargo`, …). Non-fatal — most are per-widget/feature. Stacks consumed only via Quickshell modules (NetworkManager, UPower, power-profiles-daemon, PipeWire, BlueZ, PAM) are listed in the tables above, not here. Also runs automatically before `shell`/`greeter`/`rust` (once for `all`), so missing tools are listed up front; it only warns, and a missing required tool still just fails its command under `set -e`.
 - **`shell`** (`install/shell.sh`):
   - symlinks `~/.config/niri` to this checkout's `niri/` for the *current* user (backing up any pre-existing real directory first, after confirming). Run the script as each user who should log into niri via this repo's config — it's deliberately per-user rather than a single machine-wide path, so multiple accounts on one machine (including one shared by a single greeter) each resolve their own `~/.config/niri` independently.
-  - symlinks `systemd/quickshell.service` and `systemd/swayidle.service` into `~/.config/systemd/user/`, and writes `~/.config/quickshell/session.env` with this checkout's `QS_CONFIG_PATH` and the detected `XCURSOR_THEME`/`XCURSOR_SIZE` (niri's own `environment {}` block only reaches processes niri spawns directly, not independently-started systemd units — same reason the greeter gets its own generated `run.sh`, see `install/greeter.sh`). Then `daemon-reload`s and wires both to start alongside `niri.service`. This runs quickshell as a systemd **user** service tied to `graphical-session.target` instead of niri's own `spawn-at-startup` — you get `Restart=on-failure` and `systemctl --user status/restart/...`, at the cost of this one setup step per machine.
-  - Idle-triggered lock / display power-off / suspend is handled by the shell itself, not `swayidle` — see `shell/services/IdleManager.qml`, wired into `shell.qml`. It wraps Quickshell's own `IdleMonitor` (`ext-idle-notify-v1`, the same Wayland protocol `swayidle` uses) with timeouts bound live to `Quickshell.Services.UPower`'s `onBattery`: a tighter set (lock/monitors-off/suspend at 5/5.5/10 min) on battery, relaxed (15/16/30 min) otherwise — and since it's a live QML binding rather than a value picked once at process start, plugging in or unplugging takes effect immediately, no restart needed. `swayidle.service` still runs, but stripped to just its `resume`/`before-sleep` hooks — those key off logind's `PrepareForSleep` DBus signal, which nothing in Quickshell wraps, and `before-sleep` is the only thing locking the screen before a suspend `IdleManager` didn't itself trigger (e.g. logind's own `HandleLidSwitch=suspend` default on lid close).
-- **`greeter`** (`install/greeter.sh`): deploys `common/` + `greeter/` to `/etc/quickshell/` (readable by the `greeter` system user, which usually can't see your home directory), symlinks [`greeter/config.toml`](greeter/config.toml) to `/etc/greetd/config.toml` (prompts before replacing a pre-existing real file), and enables `greetd`.
+  - installs the shell and `systemd/thomas-shell.service` / `systemd/thomas-shell-swayidle.service` system-wide with `sudo make install-shell install-units` (to `$PREFIX/share/thomas-shell/shell` and `$PREFIX/lib/systemd/user`, which systemd searches for user units), plus the `environment.d` file that points `QS_CONFIG_PATH` at the installed shell. The session runs that installed copy, not the checkout, so re-run this step after changing the shell. Then `daemon-reload`s (which also re-reads `environment.d`) and wires both to start alongside `niri.service`. Log out and back in afterwards: a running niri keeps the `QS_CONFIG_PATH` it started with. This runs quickshell as a systemd **user** service tied to `graphical-session.target` instead of niri's own `spawn-at-startup` — you get `Restart=on-failure` and `systemctl --user status/restart/...`, at the cost of this one setup step per machine.
+  - Idle-triggered lock / display power-off / suspend is handled by the shell itself, not `swayidle` — see `shell/services/IdleManager.qml`, wired into `shell.qml`. It wraps Quickshell's own `IdleMonitor` (`ext-idle-notify-v1`, the same Wayland protocol `swayidle` uses) with timeouts bound live to `Quickshell.Services.UPower`'s `onBattery`: a tighter set (lock/monitors-off/suspend at 5/5.5/10 min) on battery, relaxed (15/16/30 min) otherwise — and since it's a live QML binding rather than a value picked once at process start, plugging in or unplugging takes effect immediately, no restart needed. `thomas-shell-swayidle.service` still runs, but stripped to just its `resume`/`before-sleep` hooks — those key off logind's `PrepareForSleep` DBus signal, which nothing in Quickshell wraps, and `before-sleep` is the only thing locking the screen before a suspend `IdleManager` didn't itself trigger (e.g. logind's own `HandleLidSwitch=suspend` default on lid close).
+- **`greeter`** (`install/greeter.sh`): runs `sudo make install-greeter` to install `common/` + `greeter/` under `$PREFIX/share/thomas-shell/` (default `/usr/local`; set `PREFIX` in the environment to change it). That's a real copy readable by the `greeter` system user, which usually can't see your home directory. It then symlinks the installed `greeter/config.toml` to `/etc/greetd/config.toml` (prompts before replacing a pre-existing real file), and enables `greetd`.
 - **`rust`** (`install/rust.sh`): checks out this repo's `callie/` git submodule, builds it with `cargo build --release`, and installs the resulting binary to `/usr/local/bin/callie` (needs `sudo`). Also builds the two third-party crates.io TUI tools `wlctl`/`bluetui`, pinned to known-good versions (`WLCTL_VERSION`/`BLUETUI_VERSION` at the top of `install/rust.sh`, e.g. `wlctl@0.1.9`) rather than tracked at latest — same reproducibility goal as `callie`'s pinned submodule commit, just via a plain version string instead of a git SHA since these aren't part of this repo. Built unprivileged into a persistent cache dir (`${XDG_CACHE_HOME:-$HOME/.cache}/shell-install/cargo-root`, so re-runs get incremental rebuilds), then installed to `/usr/local/bin` the same way as `callie` — so all three bar TUI helpers live in one system-wide location rather than a per-user `~/.cargo/bin`. Drops any pre-existing plain `cargo install` copies from `~/.cargo/bin` first, so there's exactly one copy of each on `PATH`. Before installing, it checks crates.io for a newer release of each pinned tool and prints a non-fatal warning if one exists (never bumps the pin itself — that's a deliberate edit + commit to `install/rust.sh`, same as bumping the `callie` submodule). `btop`/`wiremix` are left to your distro's package manager and aren't touched by this step.
 
   **One-time prerequisite**, before `rust` can build `callie` for the first time: `install.sh` never edits `.gitmodules` itself, so add the submodule once from the repo root:
@@ -182,11 +187,26 @@ install/               setup script parts: lib.sh (helpers), utils.sh, shell.sh,
   ```
   (Use `https://`, not `git@` — it works anonymously against a public repo on any machine, without that machine needing GitHub SSH keys configured.) After that one-time commit, a fresh `git clone` of this repo — even without `--recurse-submodules` — followed by `./install.sh rust` still works: the step runs `git submodule update --init --recursive` automatically every time. If the submodule hasn't been added yet, `rust` warns and skips the `callie` build rather than failing.
 
-Run it any time the checkout changes location (it rewrites `session.env` and refreshes the symlinks), from the repo root.
+Run it from the repo root after changing the shell, greeter or units, to reinstall them.
 
 Two things it can't do for you:
 - **Remove `spawn-at-startup "quickshell"` from `niri/main.kdl`** after the `shell` part — leaving it in starts quickshell twice.
 - **The `shell` part needs `niri.service` to still pull in `graphical-session.target`** (`BindsTo=graphical-session.target` / `Before=graphical-session.target` in the packaged unit) — if you have a **full override** at `~/.config/systemd/user/niri.service` rather than a `niri.service.d/*.conf` drop-in, double check it didn't drop those lines; a full override *replaces* the packaged unit instead of merging with it.
+
+## Installing with `make`
+
+The `Makefile` puts the shell, greeter and systemd user units under a prefix using the usual conventions (`PREFIX`, default `/usr/local`; `DESTDIR` for staging; `SYSTEMDUSERUNITDIR` if your distro puts user units somewhere other than `$PREFIX/lib/systemd/user`):
+
+```bash
+make                              # list targets
+sudo make install                 # everything: /usr/local/share/thomas-shell/{shell,greeter,common}, units, docs
+sudo make install-greeter         # one part: install-shell, install-greeter, install-units, install-doc
+make install PREFIX=/usr DESTDIR=/tmp/stage   # staged install, e.g. from a distro package recipe
+sudo make uninstall
+make dist                         # thomas-shell-$VERSION.tar.gz of the committed tree
+```
+
+It only copies files: no prompts, no `systemctl`, nothing in `$HOME` or `/etc`. The `shell/`, `greeter/` and `common/` folders are replaced wholesale on each install, so files deleted from the repo disappear from the install too. Checked-in files that name the install location use `/usr/share/thomas-shell` (the `PREFIX=/usr` one), and the installed copies get it rewritten for the chosen prefix. `./install.sh greeter` uses `install-greeter`; the `shell` step still runs the shell straight from the checkout. To run an installed shell instead, enable the installed units and set `QS_CONFIG_PATH` in niri's `environment {}` block to `$PREFIX/share/thomas-shell/shell`.
 
 ## Greeter (greetd)
 
@@ -201,22 +221,21 @@ To do it by hand instead:
    ```bash
    ln -s "$PWD/niri" ~/.config/niri
    ```
-2. Deploy `common/` and `greeter/` as siblings somewhere the greeter's system user (commonly `greeter`) can read — it doesn't need the rest of this repo. `rsync -a` preserves the relative symlink between them as long as they stay siblings, and `--delete` keeps re-syncing after future edits clean (removes anything at the destination no longer in the source):
+2. Install `common/` and `greeter/` somewhere the greeter's system user (commonly `greeter`) can read:
    ```bash
-   sudo mkdir -p /etc/quickshell
-   sudo rsync -a --delete common greeter /etc/quickshell/
+   sudo make install-greeter        # /usr/local/share/thomas-shell/{greeter,common}
    ```
    Re-run this any time `common/` or `greeter/` change.
-3. Symlink the greetd config (greetd reads it as root, so pointing into the checkout is fine):
+3. Symlink the installed greetd config (its `command` path is fixed up for the install prefix):
    ```bash
-   sudo ln -s "$PWD/greeter/config.toml" /etc/greetd/config.toml
+   sudo ln -s /usr/local/share/thomas-shell/greeter/config.toml /etc/greetd/config.toml
    ```
 4. Enable greetd: `sudo systemctl enable --now greetd`.
 
-By default the greeter launches `niri-session` on successful login (see `GreeterWindow.sessionCommand`). It doesn't pass niri any explicit config path — niri resolves `~/.config/niri/config.kdl` on its own for whichever user `niri-session` actually launches as, so step 1's symlink is what makes it pick up this repo's config instead of creating a fresh default. This is also what makes the greeter safe to share across multiple user accounts on one machine: each user's symlink is independent, so there's no single machine-wide config path to collide on. Override `sessionCommand` if your session needs a different wrapper (e.g. `["dbus-run-session", "niri"]`).
+By default the greeter launches `niri-session` on successful login, wrapped in `systemd-cat` so its output goes to the journal (`journalctl -t niri-session`) rather than flashing on the console (see `GreeterWindow.sessionCommand`). It doesn't pass niri any explicit config path — niri resolves `~/.config/niri/config.kdl` on its own for whichever user `niri-session` actually launches as, so step 1's symlink is what makes it pick up this repo's config instead of creating a fresh default. This is also what makes the greeter safe to share across multiple user accounts on one machine: each user's symlink is independent, so there's no single machine-wide config path to collide on. Override `sessionCommand` if your session needs a different wrapper (e.g. `["dbus-run-session", "niri"]`).
 
 Caveats:
-- The greeter shares the same `ThemeEngine`/`Theme` code as the main shell, but its saved-theme state is per-config-instance — it has no access to your logged-in session's theme selection and just falls back to the first entry in `themes.json`.
+- The greeter shares the same `ThemeEngine`/`Theme` code as the main shell, but reads its theme and font from `/etc/thomas-shell/greeter.json` (written by the launcher's **Sync greeter theme and font** action). Without that file it falls back to the first entry in `themes.json`.
 - **Multi-monitor**: cage has no `wlr-layer-shell` support (unlike niri), so the greeter can't put separate content on each screen the way the main shell's bar/OSD/notifications do. Cage always maximizes its single window across the bounding box of every connected output (its default "extend" multi-monitor mode). `GreeterWindow.qml` works around this by keeping the whole window a flat `Theme.bgBase` background and confining the actual login UI to the sub-rectangle matching the largest connected screen — so any other screen just shows a plain on-theme background rather than stretched UI.
 
 ## Credits

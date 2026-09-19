@@ -2,15 +2,6 @@
 # third-party wlctl/bluetui TUI helpers the bar shells out to.
 # Sourced by install.sh; run_rust is its entrypoint.
 # Requires REPO_ROOT to already be set.
-#
-# callie/ is a git submodule of this repo (github.com/thomaswallaceg/callie);
-# this step does not add the submodule to .gitmodules (a one-time, manual
-# `git submodule add` — see README.md) — it only makes sure an already-added
-# submodule is checked out, then builds and installs it. wlctl and bluetui
-# are unrelated third-party crates (crates.io), pinned to known-good versions
-# below rather than tracked at latest, built unprivileged via
-# `cargo install --root`, then installed to /usr/local/bin like callie so
-# all three bar TUI helpers live in the same system-wide location.
 
 # Bump these deliberately (check_cargo_tool_update warns, at run_rust time,
 # if crates.io has moved past what's pinned here — it never bumps for you).
@@ -61,12 +52,7 @@ check_cargo_tool_update() {
     fi
 }
 
-# Third-party TUI helpers (crates.io), not part of this repo. Built
-# unprivileged into a persistent cache dir (so re-runs get incremental
-# rebuilds instead of recompiling from scratch), then the binaries are
-# copied to /usr/local/bin — never run cargo itself under sudo. Drops any
-# earlier plain `cargo install` copies from ~/.cargo/bin so there's exactly
-# one copy of each on PATH.
+# Built unprivileged into a persistent cache dir, then copied to /usr/local/bin.
 install_cargo_tools() {
     local install_root="${XDG_CACHE_HOME:-$HOME/.cache}/shell-install/cargo-root"
 
