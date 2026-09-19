@@ -133,6 +133,7 @@ binds { // wev to find out key codes
 
     Mod+C { center-column; }
     Mod+Ctrl+C { center-visible-columns; }
+    // Mod+Shift+C { align-column "right"; } # Not yet in niri
 
     // Finer width adjustments.
     // This command can also:
