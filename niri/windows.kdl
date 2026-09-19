@@ -6,11 +6,11 @@ layer-rule {
     place-within-backdrop true
 }
 
-// Optionally, disable the workspace shadows in the overview.
 overview {
-    workspace-shadow {
-        //on
-    }
+    // workspace-shadow {
+    //     off // Optionally, disable the workspace shadows in the overview.
+    // }
+    backdrop-color "black"
 }
 
 hotkey-overlay {
@@ -18,6 +18,8 @@ hotkey-overlay {
 }
 
 cursor {
+    xcursor-theme "Adwaita"
+    xcursor-size 24
     hide-when-typing
 }
 
@@ -136,7 +138,7 @@ window-rule {
     clip-to-geometry true
 }
 
-/-window-rule {
+window-rule {
     // Example: block out two password managers from screen capture.
     match app-id=r#"^org\.keepassxc\.KeePassXC$"#
     match app-id=r#"^org\.gnome\.World\.Secrets$"#
@@ -150,7 +152,10 @@ window-rule {
     open-focused false
 }
 
+// Open games in fullscreen and in main monitor
 window-rule {
     match app-id=r#"^steam_app_"#
+    match app-id=r#"^gamescope$"#
     open-fullscreen true
+    open-on-output "LG Electronics LG ULTRAGEAR 109MXUN8P318"
 }
