@@ -1,4 +1,4 @@
-# Ignore editor / OS noise
+# Editor / OS noise
 *~
 *.swp
 .DS_Store
@@ -8,4 +8,7 @@
 *.jsc
 .qml-cache/
 .qmlls.ini
+
+# Misc
 todo.txt
+PLAN*.md

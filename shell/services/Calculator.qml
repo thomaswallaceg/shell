@@ -4,12 +4,8 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 
-// Launcher calculator, backed by qalc (libqalculate) instead of a hand-rolled
-// JS `Function` eval — real implicit multiplication ("2(3+4)"), functions,
-// units, etc. qalc is a subprocess, so this debounces on the launcher's own
-// typing cadence and guards against races with a generation counter — the
-// same idiom LauncherTab.qml's own file search already uses (see
-// fileSearchProc/fileSearchGeneration there).
+// Launcher calculator backed by qalc (libqalculate); debounced, with a
+// generation counter against out-of-order results.
 Singleton {
   id: root
 
@@ -21,12 +17,7 @@ Singleton {
 
   property int _generation: 0
 
-  // Needs a digit, plus something that makes it look like an actual
-  // expression rather than a plain search term — otherwise every app-name
-  // search would spawn qalc. A guard-pass qalc still can't evaluate just
-  // fails silently (no result shown, one cheap debounced subprocess), so
-  // this errs toward covering more of what qalc itself understands rather
-  // than trying to whitelist exact syntax:
+  // Only spawn qalc for queries with a digit that also look like an expression:
   //   - an arithmetic/grouping/factorial operator: 2+3, 2(3+4), 5!
   //   - conversion phrasing: 5 km to miles, 100 usd to eur, 16 to hex
   //   - implicit multiplication against a constant/unit with no operator

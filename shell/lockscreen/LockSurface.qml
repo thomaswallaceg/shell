@@ -11,13 +11,8 @@ import qs.common.power
 // but always password-only for the current user — no username stage, since
 // the session is already known to belong to Quickshell.env("USER").
 //
-// Unlike the greeter (a single window spanning all outputs, since cage lacks
-// per-output surfaces), WlSessionLock gives every screen its own real
-// surface/instance of this component. To still mirror the greeter's
-// "biggest screen first, then follow the mouse" behavior rather than
-// showing the auth card on every screen at once, only the screen Lockscreen
-// has picked as `active` actually shows/accepts input for it — others stay a
-// plain themed background.
+// Only the screen Lockscreen picks as `active` shows the prompt; the others
+// stay a plain themed background.
 Rectangle {
     id: root
 

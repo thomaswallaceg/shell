@@ -131,8 +131,8 @@ Item {
         {
             id: "__action__sync_greeter_theme",
             kind: "action",
-            name: "Sync theme to greeter",
-            genericName: "Copy the current theme and font to the login screen",
+            name: "Sync greeter theme and font",
+            genericName: "Copy your theme and font to the login screen (needs an admin)",
             keywords: ["greeter", "sync", "theme", "font", "login", "greetd"],
             glyph: "󰓦",
             action: "sync-greeter-theme"
@@ -253,11 +253,7 @@ Item {
                 CoffeeMode.toggle();
                 break;
             case "sync-greeter-theme":
-                // Elevates via pkexec — the greeter's state dir is owned by
-                // its own system user (root/greeter), not this session's
-                // user. See sync-greeter-preferences.sh for why it's safe to
-                // compute the greeter's state path without asking a running
-                // greeter process for it.
+                // pkexec: writes the admin-owned /etc/thomas-shell/greeter.json.
                 Quickshell.execDetached([
                     "pkexec",
                     Quickshell.shellPath("scripts/sync-greeter-preferences.sh"),

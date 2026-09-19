@@ -2,12 +2,8 @@ import Quickshell
 import Quickshell.Services.Pam
 import QtQuick
 
-// Wraps a PamContext authenticating the currently logged-in user, shared by
-// every screen's LockSurface (see Lockscreen.qml). Uses a dedicated pam
-// service (pam/auth.conf) rather than a system one like "login"/"sudo", since
-// those can carry unrelated behavior (e.g. failure delays, extra prompts)
-// that isn't a good fit for a lockscreen prompt — see Quickshell's
-// Quickshell.Services.Pam docs on writing pam configurations.
+// PamContext for the logged-in user, shared by every screen's LockSurface.
+// Uses its own pam service (pam/auth.conf).
 QtObject {
     id: root
 

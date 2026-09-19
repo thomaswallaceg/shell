@@ -1,14 +1,7 @@
 import QtQuick
 
-// Dev-only stand-in for Quickshell.Services.Greetd's Greetd singleton.
-// GreeterWindow picks this as its `backend` whenever Greetd.available is
-// false, so the whole login flow (username -> password -> waiting -> launch)
-// can be exercised while testing this file windowed (`qs -p greeter`, see
-// README) without a real greetd socket — and so GreeterWindow itself never
-// has to branch on Greetd.available beyond that one selection. Mirrors just
-// the slice of the real singleton's API GreeterWindow actually drives:
-// createSession/respond/launch and the authMessage/authFailure/error/
-// readyToLaunch signals.
+// Dev-only stand-in for the Greetd singleton, used when Greetd.available is
+// false so the login flow can be tested windowed (`qs -p greeter`).
 QtObject {
     id: root
 
