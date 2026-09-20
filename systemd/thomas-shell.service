@@ -5,7 +5,6 @@ Description=Quickshell (niri shell)
 # a matter of commenting that line out. PartOf stops it again at logout.
 PartOf=graphical-session.target
 After=graphical-session.target
-Wants=thomas-shell-swayidle.service
 
 [Service]
 # QS_CONFIG_PATH and XCURSOR_* come from the user manager's environment

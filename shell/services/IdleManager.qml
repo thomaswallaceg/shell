@@ -8,7 +8,8 @@ import qs.services
 
 // Idle-triggered lock / display power-off / suspend (ext-idle-notify-v1), with
 // timeouts following UPower.onBattery live. Locking before a suspend this
-// didn't trigger is left to thomas-shell-swayidle.service's before-sleep hook.
+// didn't trigger (lid close, `systemctl suspend`, low battery) is
+// SleepWatcher.qml's job.
 Singleton {
   id: root
 

@@ -1,6 +1,6 @@
-# Step: install the shell and its systemd user units (quickshell + swayidle)
-# system-wide via `make install-shell install-units`. The niri config's shell
-# include starts them. The session runs the installed shell, not this checkout:
+# Step: install the shell and its systemd user unit system-wide via
+# `make install-shell install-units`. The niri config's shell include starts
+# it. The session runs the installed shell, not this checkout:
 # to develop, stop thomas-shell.service and run `qs -p ./shell` by hand.
 # The niri config is its own repo, cloned to ~/.config/niri; nothing here
 # touches it.
@@ -14,8 +14,8 @@ install_shell_and_units() {
     # get the installed QS_CONFIG_PATH.
     systemctl --user daemon-reload
 
-    # No `enable`: the niri config's shell include starts thomas-shell.service
-    # (which pulls in swayidle), so swapping shells needs no systemctl.
+    # No `enable`: the niri config's shell include starts thomas-shell.service,
+    # so swapping shells needs no systemctl.
     warn "Log out and back in to switch the running session to the installed shell."
 }
 

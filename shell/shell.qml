@@ -21,6 +21,9 @@ Scope {
   // Keep the singleton alive so its IdleMonitors actually run — see
   // IdleManager.qml.
   readonly property var _idle: IdleManager
+  // Keep the singleton alive so it holds the sleep inhibitor and watches
+  // logind — see SleepWatcher.qml.
+  readonly property var _sleep: SleepWatcher
   // Keep the singleton alive so its IpcHandler responds to
   // `qs ipc call coffee toggle` even before the bar widget/launcher touch it.
   readonly property var _coffee: CoffeeMode
