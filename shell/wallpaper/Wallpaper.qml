@@ -54,6 +54,12 @@ Scope {
         property bool useA: true
         property int loadGeneration: 0
 
+        // Decode at screen size instead of the file's full resolution
+        readonly property size decodeSize: {
+          const edge = Math.max(content.width, content.height);
+          return Qt.size(edge, edge);
+        }
+
         function pathToUrl(path) {
           if (path.startsWith("file:") || path.startsWith("http:") || path.startsWith("https:"))
             return path;
@@ -83,11 +89,17 @@ Scope {
           anchors.fill: parent
           fillMode: Image.PreserveAspectCrop
           asynchronous: true
+          sourceSize: content.decodeSize
+          cache: false
           opacity: content.useA ? 1 : 0
           Behavior on opacity {
             NumberAnimation {
               duration: 350
               easing.type: Easing.InOutQuad
+              onFinished: {
+                if (imageA.opacity === 0)
+                  imageA.source = "";
+              }
             }
           }
           onStatusChanged: {
@@ -102,11 +114,17 @@ Scope {
           anchors.fill: parent
           fillMode: Image.PreserveAspectCrop
           asynchronous: true
+          sourceSize: content.decodeSize
+          cache: false
           opacity: content.useA ? 0 : 1
           Behavior on opacity {
             NumberAnimation {
               duration: 350
               easing.type: Easing.InOutQuad
+              onFinished: {
+                if (imageB.opacity === 0)
+                  imageB.source = "";
+              }
             }
           }
           onStatusChanged: {

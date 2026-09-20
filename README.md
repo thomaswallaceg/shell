@@ -14,7 +14,7 @@ Personal [Quickshell](https://quickshell.org/) desktop shell for [niri](https://
 | **Lockscreen** | Wayland session lock for the current user (`shell/lockscreen/`) — see below |
 | **Greeter** | Optional standalone login screen for [greetd](https://github.com/kalyverse/greetd) (`greeter/`) — see below |
 
-Bar widgets can open TUI tools in a floating terminal (alacritty by default). The bar auto-hides on a single monitor (hover or `qs ipc call bar peek`) and stays on the smallest screen when several are connected.
+Bar widgets can open TUI tools in a floating terminal (alacritty by default). The bar lives on the smallest connected screen — usually the one least likely to be your main display.
 
 ## Running
 
@@ -49,13 +49,12 @@ qs ipc call launcher toggle
 qs ipc call theme toggle
 qs ipc call font toggle
 qs ipc call bar toggle
-qs ipc call bar peek
 qs ipc call wallpaper set /path/to/image.jpg
 qs ipc call wallpaper clear
 qs ipc call wallpaper pick
 ```
 
-Launcher action **Set wallpaper** (search “wallpaper”) opens a Zenity file dialog and applies the chosen image.
+Launcher action **Set wallpaper** (search “wallpaper”) opens a Zenity file dialog and applies the chosen image. The file is copied into the shell's own state directory and used from there, so moving or deleting the original later doesn't break it — and since the wallpaper is decoded at screen size on the fly, plugging in a bigger monitor still gets full resolution.
 
 Launcher action **Sync greeter theme and font** (search “greeter”) copies your current theme and font to the login screen. Your own theme/font choices only ever change your shell and lockscreen; the greeter is shared by every user, so changing it needs an admin's password. The action runs `shell/scripts/sync-greeter-preferences.sh` through `pkexec`, which checks the theme exists and writes `/etc/thomas-shell/greeter.json`. The greeter reads that file (read-only) and picks up changes on its next start. `make install-shell` installs a polkit policy for the script, so the password prompt says what it's for. It's a one-shot copy, not a live sync. No wallpaper equivalent yet; the greeter doesn't currently render one.
 

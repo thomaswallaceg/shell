@@ -47,12 +47,10 @@ Scope {
                 right: true
             }
 
-            // The bar is only ever permanently shown in multi-monitor mode; in
-            // single-monitor mode it's hidden by default (hover/peek reveal),
-            // so there's no need to reserve space for it — we don't track its
-            // live reveal state, so if it's peeked while a notification is up
-            // they can just overlap in that case.
-            readonly property int barOffset: Displays.singleMonitor ? 0 : ThemeEngine.barHeight
+            // Notifications share the bar's screen and ignore exclusive
+            // zones (see exclusionMode above), so they have to leave the bar's
+            // height free themselves.
+            readonly property int barOffset: ThemeEngine.barHeight
 
             implicitWidth: 380
             implicitHeight: notifColumn.implicitHeight + notifWindow.barOffset + 20
