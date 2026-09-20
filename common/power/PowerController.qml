@@ -7,6 +7,11 @@ import QtQuick
 // Shared power actions + logind inhibitor probe. Bar, launcher, lockscreen,
 // and greeter all call request(); reboot/shutdown check systemd-inhibit first
 // and only prompt when something is delaying shutdown.
+//
+// Lock and logout need a live session (a compositor to quit, a lockscreen to
+// call), which this can't assume: it's also loaded by the greeter, where those
+// two aren't even offered (PowerWidget.showSessionActions). Both are emitted
+// as sessionActionRequested instead, and shell.qml answers it.
 Singleton {
   id: root
 
@@ -14,6 +19,9 @@ Singleton {
   property bool checking: false
   property string pendingAction: ""
   property var inhibitors: []
+
+  // "lock" | "logout" — see the note above.
+  signal sessionActionRequested(string action)
 
   readonly property string pendingLabel: pendingAction === "reboot" ? "Restart" : "Shut Down"
   readonly property string pendingVerb: pendingAction === "reboot" ? "restart" : "shut down"
@@ -55,7 +63,8 @@ Singleton {
   function execute(action) {
     switch (action) {
       case "lock":
-        Quickshell.execDetached(["qs", "ipc", "call", "lockscreen", "lock"]);
+      case "logout":
+        root.sessionActionRequested(action);
         break;
       case "suspend":
         Quickshell.execDetached(["systemctl", "suspend"]);
@@ -65,9 +74,6 @@ Singleton {
         break;
       case "shutdown":
         Quickshell.execDetached(["systemctl", "poweroff"]);
-        break;
-      case "logout":
-        Quickshell.execDetached(["niri", "msg", "action", "quit"]);
         break;
     }
   }

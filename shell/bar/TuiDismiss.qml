@@ -14,7 +14,7 @@ Scope {
       required property var modelData
       screen: modelData
 
-      visible: Niri.tuiWindowIds.length > 0
+      visible: TuiWindows.ids.length > 0
       color: "transparent"
       focusable: false
 
@@ -32,7 +32,7 @@ Scope {
 
       MouseArea {
         anchors.fill: parent
-        onPressed: Niri.closeUnfocusedTuiWindows(null)
+        onPressed: TuiWindows.closeAll()
       }
     }
   }

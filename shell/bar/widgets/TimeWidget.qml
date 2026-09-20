@@ -36,6 +36,6 @@ BarPill {
   MouseArea {
     anchors.fill: parent
     cursorShape: Qt.PointingHandCursor
-    onClicked: Niri.openFloatingTui("callie --background asteroids")
+    onClicked: TuiWindows.open("callie --background asteroids")
   }
 }

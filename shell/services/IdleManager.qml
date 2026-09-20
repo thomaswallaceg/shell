@@ -30,7 +30,7 @@ Singleton {
     enabled: !CoffeeMode.enabled
     timeout: root.monitorsOffTimeout
     onIsIdleChanged: if (isIdle)
-      Quickshell.execDetached(["niri", "msg", "action", "power-off-monitors"])
+      Niri.dispatch(["power-off-monitors"])
   }
 
   IdleMonitor {
