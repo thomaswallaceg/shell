@@ -14,6 +14,6 @@ IconTextBarPill {
   MouseArea {
     anchors.fill: parent
     cursorShape: Qt.PointingHandCursor
-    onClicked: Niri.openFloatingTui("btop")
+    onClicked: TuiWindows.open("btop")
   }
 }

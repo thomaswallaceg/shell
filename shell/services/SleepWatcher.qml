@@ -3,6 +3,7 @@ pragma Singleton
 import Quickshell
 import Quickshell.Io
 import QtQuick
+import qs.services
 
 // Locks before the system sleeps and powers the monitors back on after it
 // wakes — what the swayidle unit used to do. logind announces both with its
@@ -29,7 +30,7 @@ Singleton {
   // does it explicitly below.
   Process {
     id: monitorsOff
-    command: ["niri", "msg", "action", "power-off-monitors"]
+    command: Niri.actionCommand(["power-off-monitors"])
     onExited: lockProc.running = true
   }
 
@@ -53,7 +54,7 @@ Singleton {
         if (line.includes("PrepareForSleep (true")) {
           monitorsOff.running = true;
         } else if (line.includes("PrepareForSleep (false")) {
-          Quickshell.execDetached(["niri", "msg", "action", "power-on-monitors"]);
+          Niri.dispatch(["power-on-monitors"]);
           inhibitor.running = true;
         }
       }

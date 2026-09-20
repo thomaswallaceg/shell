@@ -211,7 +211,7 @@ Item {
                 Quickshell.execDetached(["qs", "ipc", "call", "lockscreen", "lock"]);
                 break;
             case "logout":
-                Quickshell.execDetached(["niri", "msg", "action", "quit"]);
+                Niri.dispatch(["quit"]);
                 break;
             case "suspend":
                 PowerController.request("suspend");

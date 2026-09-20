@@ -18,6 +18,19 @@ import qs.services
 Scope {
   // Keep the singleton alive for bar/launcher power actions.
   readonly property var _power: PowerController
+
+  // PowerController is shared with the greeter, so it leaves the two actions
+  // that need a live session to whoever runs one — here, that's us.
+  Connections {
+    target: PowerController
+
+    function onSessionActionRequested(action) {
+      if (action === "logout")
+        Niri.dispatch(["quit"]);
+      else
+        Quickshell.execDetached(["qs", "ipc", "call", "lockscreen", "lock"]);
+    }
+  }
   // Keep the singleton alive so its IdleMonitors actually run — see
   // IdleManager.qml.
   readonly property var _idle: IdleManager

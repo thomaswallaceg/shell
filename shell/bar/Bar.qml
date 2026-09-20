@@ -165,7 +165,7 @@ Scope {
           anchors.fill: parent
           propagateComposedEvents: true
           onPressed: mouse => {
-            Niri.closeUnfocusedTuiWindows(null);
+            TuiWindows.closeAll();
             mouse.accepted = false;
           }
         }

@@ -53,6 +53,6 @@ IconTextBarPill {
   MouseArea {
     anchors.fill: parent
     cursorShape: Qt.PointingHandCursor
-    onClicked: Niri.openFloatingTui("wlctl")
+    onClicked: TuiWindows.open("wlctl")
   }
 }

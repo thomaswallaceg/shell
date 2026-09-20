@@ -4,10 +4,12 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 
-// Niri has no bundled Quickshell module (unlike Hyprland/i3), so this talks to
-// niri's own JSON IPC directly: `niri msg --json ...` for one-shot queries, and
-// a long-running `niri msg --json event-stream` for live updates. See:
-// https://niri-wm.github.io/niri/niri_ipc/ (or `niri msg --help`)
+// Compositor adapter: workspace/window state, niri actions, and the raw event
+// stream. Niri has no bundled Quickshell module (unlike Hyprland/i3), so this
+// is shaped like those — shell code reads state or calls dispatch() here
+// instead of running `niri msg` itself. Anything policy-shaped (which windows
+// to close, when to blank the screen) belongs in its caller, not here; see
+// TuiWindows.qml. https://niri-wm.github.io/niri/niri_ipc/
 Singleton {
   id: root
 
@@ -16,44 +18,17 @@ Singleton {
   property var workspaces: []
   property string activeWindowTitle: ""
 
+  // Every event niri sends, forwarded as-is for callers that need more than
+  // the state above.
+  signal ipcEvent(string type, var payload)
+
   function refreshWorkspaces() { workspacesProc.running = true }
   function refreshActiveWindow() { activeWindowProc.running = true }
 
-  property string terminal: "alacritty"
-  readonly property string tuiWindowTitle: "quickshell-tui-widget"
-  property var tuiWindowIds: []
-
-  function openFloatingTui(command) {
-    closeUnfocusedTuiWindows(null);
-    spawnProc.command = ["niri", "msg", "action", "spawn", "--", terminal, "-t", tuiWindowTitle, "-e", ...command.split(" ")];
-    spawnProc.running = true;
-  }
-
-  function syncTuiWindows(windows) {
-    const ids = [];
-    for (const win of windows) {
-      if (win?.title === tuiWindowTitle)
-        ids.push(win.id);
-    }
-    tuiWindowIds = ids;
-  }
-
-  function closeUnfocusedTuiWindows(focusedId) {
-    for (const id of tuiWindowIds) {
-      if (id === focusedId)
-        continue;
-      Quickshell.execDetached(["niri", "msg", "action", "close-window", "--id", String(id)]);
-    }
-  }
-
-  function removeTuiWindow(id) {
-    tuiWindowIds = tuiWindowIds.filter(winId => winId !== id);
-  }
-
-  Process {
-    id: spawnProc
-    running: false
-  }
+  // `niri msg action <args>`. actionCommand is for callers that need to run it
+  // as their own Process — e.g. to wait for it to finish (SleepWatcher.qml).
+  function actionCommand(args) { return ["niri", "msg", "action", ...args] }
+  function dispatch(args) { Quickshell.execDetached(root.actionCommand(args)) }
 
   Process {
     id: workspacesProc
@@ -124,31 +99,14 @@ Singleton {
             root.refreshWorkspaces()
             break
           case "WindowsChanged":
-            root.syncTuiWindows(payload?.windows ?? [])
-            root.refreshActiveWindow()
-            break
           case "WindowFocusChanged":
-            root.closeUnfocusedTuiWindows(payload?.id ?? null)
-            root.refreshActiveWindow()
-            break
-          case "WindowOpenedOrChanged": {
-            const win = payload?.window
-            if (win?.title === root.tuiWindowTitle) {
-              const id = win.id;
-              if (!root.tuiWindowIds.includes(id))
-                root.tuiWindowIds = root.tuiWindowIds.concat([id]);
-            }
-            // niri skips WindowFocusChanged when a newly spawned window takes focus.
-            if (win?.is_focused)
-              root.closeUnfocusedTuiWindows(win.title === root.tuiWindowTitle ? win.id : null)
-            root.refreshActiveWindow()
-            break
-          }
+          case "WindowOpenedOrChanged":
           case "WindowClosed":
-            root.removeTuiWindow(payload?.id)
             root.refreshActiveWindow()
             break
         }
+
+        root.ipcEvent(type, payload)
       }
     }
   }

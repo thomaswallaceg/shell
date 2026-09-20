@@ -23,7 +23,7 @@ shell/                  the main Quickshell config — its own Quickshell config
   osd/                  session layer-shell OSD window (reads common/osd)
   wallpaper/            desktop wallpaper (Wallpaper + WallpaperController); Background layer, namespace "wallpaper"
   lockscreen/           Wayland session lock (Lockscreen, LockContext/PamContext, LockSurface)
-  services/             singletons: Niri, SystemInfo, Time, Displays
+  services/             singletons: Niri (compositor adapter), TuiWindows, IdleManager, SleepWatcher, SystemInfo, Time, Displays
   common                symlink -> ../common
 greeter/                separate Quickshell config (own shell.qml) for greetd — see below
   common                symlink -> ../common
@@ -112,7 +112,7 @@ A separate Quickshell config (its own `shell.qml`), living in `greeter/` in this
 ## Gotchas
 
 - Widgets assume specific CLI tools are on `PATH` (see README's dependency tables and `install/utils.sh`'s `check_dependencies`) — don't add new hard runtime deps without updating both. This now also covers build-time deps of `install/rust.sh` (`cargo`), not just widget runtime deps.
-- `shell/services/Niri.qml` talks to niri over `niri msg --json ...` / event-stream; there's no Quickshell-native niri module, so don't expect `Quickshell.*` APIs for workspaces/windows.
+- `shell/services/Niri.qml` is the compositor adapter: it talks to niri over `niri msg --json …` / event-stream (there's no Quickshell-native niri module, unlike `Quickshell.Hyprland`/`Quickshell.I3`, so don't expect `Quickshell.*` APIs for workspaces/windows) and is shaped like those: state (`workspaces`, `activeWindowTitle`), `dispatch(args)` / `actionCommand(args)` for `niri msg action …`, and an `ipcEvent(type, payload)` signal carrying every event. Keep policy out of it — `TuiWindows.qml` owns the floating TUI terminals by listening to `ipcEvent`, and other code calls `Niri.dispatch` rather than running `niri msg` itself. `common/` never calls the compositor: `PowerController.qml` is shared with the greeter (which can't import `qs.services`, and doesn't offer those actions — see `PowerWidget.showSessionActions`), so its lock/logout actions are emitted as `sessionActionRequested` and answered in `shell.qml`.
 - Theme colors come from `common/theme/themes.json` + `ThemePalette.qml`, not hardcoded hex values — new UI should read from `Theme.*`.
 - `common/` has no `shell.qml` and is never run directly — it's only ever reached through the symlinks in `shell/` and `greeter/`. Don't add a `shell.qml` there.
 - niri's `qs ipc call ...` keybinds and `lid-close` (both in the separate niri config repo) and `SleepWatcher.qml`'s lock command find the running shell through `QS_CONFIG_PATH`, set by the installed `environment.d/60-thomas-shell.conf`. Without it `qs` looks for a "default" config and fails. When running a checkout by hand (`qs -p ./shell`), pass `-p ./shell` to `qs ipc` as well.

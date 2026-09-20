@@ -66,7 +66,7 @@ Launcher action **Sync greeter theme and font** (search “greeter”) copies yo
 - [Quickshell](https://quickshell.org/) (Qt 6)
 - [niri](https://github.com/niri-wm/niri)
 - A *Propo* [Nerd Font](https://www.nerdfonts.com/) — this config defaults to **CodeNewRoman Nerd Font Propo** (`ThemeEngine.fontFamily`)
-- [alacritty](https://alacritty.org/) (or change `Niri.terminal` in `shell/services/Niri.qml`)
+- [alacritty](https://alacritty.org/) (or change `TuiWindows.terminal` in `shell/services/TuiWindows.qml`)
 - The **Adwaita** cursor theme (`adwaita-cursors` on Arch, `adwaita-icon-theme` on Debian/Fedora). niri, the session environment (`environment.d/60-thomas-shell.conf`) and the greeter all set it at size 24 so the cursor looks the same everywhere. Change it in the niri config repo's `cursor {}` block, `systemd/environment.d/60-thomas-shell.conf` and `greeter/config.toml` together.
 
 ### Bar / OSD / system services
@@ -143,7 +143,7 @@ shell/                 the main Quickshell config (its own shell.qml)
   osd/                 session layer-shell OSD window
   wallpaper/           desktop wallpaper (Background layer-shell + WallpaperController)
   lockscreen/          session lock (Lockscreen, LockContext/PamContext, LockSurface)
-  services/            Niri, SystemInfo, Time, Displays
+  services/            Niri (compositor adapter), TuiWindows, IdleManager, SleepWatcher, SystemInfo, Time, Displays
   common                symlink -> ../common
 greeter/               separate config for greetd (own shell.qml, common symlink -> ../common)
 callie/                git submodule: TUI calendar app, built by install.sh rust
