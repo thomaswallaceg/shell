@@ -1,9 +1,9 @@
 ---
 name: niri-config
-description: Reference for niri's config.kdl syntax and its JSON IPC (`niri msg`) as used in this repo's niri/ config and shell/services/Niri.qml. Load before editing any niri/*.kdl file, writing/reviewing `niri msg`/`niri msg action` invocations, or touching Niri.qml's event-stream parsing.
+description: Reference for niri's config.kdl syntax and its JSON IPC (`niri msg`) as used by shell/services/Niri.qml and the separate niri config repo (~/.config/niri). Load before editing any niri *.kdl file, writing/reviewing `niri msg`/`niri msg action` invocations, or touching Niri.qml's event-stream parsing.
 ---
 
-# niri config + IPC reference (this repo)
+# niri config + IPC reference
 
 Pinned to **niri 26.04** (`niri --version`). Niri ships frequent releases and its own docs note the IPC crate "follows niri's version numbering... new fields/variants are added" — i.e. it is *not* API-stable across versions the way a 1.0 library would be. If the installed version has moved on from 26.04, don't assume anything below still matches — re-check live (see bottom).
 
@@ -11,22 +11,26 @@ Pinned to **niri 26.04** (`niri --version`). Niri ships frequent releases and it
 
 ## Config file layout in this repo
 
-`niri/` is symlinked to `~/.config/niri` by `install.sh shell` (see `AGENTS.md`). Structure:
+The niri config is **not in this repo** any more: it's its own repo
+(github.com/thomaswallaceg/niri-config), cloned to `~/.config/niri` by each
+user. It's what starts this shell (`systemctl --user start
+thomas-shell.service` in its shell include) and where the `qs ipc` keybinds,
+the quickshell window/layer rules and the `cursor {}` block live. Structure:
 
 ```
-niri/config.kdl      just: include "main.kdl"
-niri/main.kdl        includes the four files below + top-level settings (environment{}, screenshot-path, debug{})
-niri/keybinds.kdl     binds {} block — all keybindings
-niri/peripherals.kdl  input {} block (keyboard/touchpad/mouse) — also includes keybinds.kdl itself
-niri/windows.kdl      layer-rule{}, window-rule{}, overview{}, hotkey-overlay{}, cursor{}, etc.
-niri/outputs.kdl      output "<name>" {} blocks, one per monitor
+config.kdl      just: include "main.kdl"
+main.kdl        includes the files below + top-level settings (screenshot-path, debug{})
+keybinds.kdl     binds {} block — all keybindings
+peripherals.kdl  input {} block (keyboard/touchpad/mouse) — also includes keybinds.kdl itself
+windows.kdl      layer-rule{}, window-rule{}, overview{}, hotkey-overlay{}, cursor{}, etc.
+outputs.kdl      output "<name>" {} blocks, one per monitor
 ```
 
 Config is **live-reloaded** — saving any included file applies changes immediately, no niri restart needed. Validate without applying: `niri validate` (run from inside a niri session, or point `--config`/`-c` at a specific file).
 
 ## KDL syntax basics
 
-[KDL](https://kdl.dev) is a block-based config language, not YAML/TOML/JSON. Patterns actually used in this repo's `niri/*.kdl`:
+[KDL](https://kdl.dev) is a block-based config language, not YAML/TOML/JSON. Patterns actually used in that config's `*.kdl` files:
 
 ```kdl
 // line comment

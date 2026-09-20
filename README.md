@@ -18,12 +18,21 @@ Bar widgets can open TUI tools in a floating terminal (alacritty by default). Th
 
 ## Running
 
-The main config lives in `shell/` (not at the repo root — see [Layout](#layout)), so it's a *named* Quickshell config. From `~/.config/quickshell` (or any checkout, via `-p`):
+The main config lives in `shell/` (not at the repo root — see [Layout](#layout)), so it's run by path:
 
 ```bash
-qs -c shell
-# or: qs -p /path/to/this/repo/shell
+qs -p /path/to/this/repo/shell
 ```
+
+At login the shell is started by the [niri config repo](https://github.com/thomaswallaceg/niri-config), cloned to `~/.config/niri`: its shell include runs `systemctl --user start thomas-shell.service`, which also pulls in `thomas-shell-swayidle.service`. Commenting out that one line is all it takes to stop this shell from starting.
+
+What the compositor config has to provide, all of it in that repo's shell include:
+
+- `spawn-at-startup "systemctl" "--user" "start" "thomas-shell.service"`
+- keybinds calling `qs ipc call …` (launcher, lockscreen, media keys) and `lid-close` for the lock — see the IPC examples below
+- a floating window rule matching the title `quickshell-tui-widget`, for the TUI tools the bar opens
+- a layer rule for the `quickshell/wallpaper` namespace (niri: `place-within-backdrop`)
+- the `cursor {}` block, matching the other two places listed under [Dependencies](#required)
 
 Once installed (`./install.sh shell` or `make install-shell`), the session runs the installed copy, `$PREFIX/share/thomas-shell/shell`. `make` also installs `$PREFIX/lib/environment.d/60-thomas-shell.conf`, which sets `QS_CONFIG_PATH` for your whole systemd user session. That's how `thomas-shell.service`, `thomas-shell-swayidle.service` and niri's `qs ipc call …` keybinds all find the same shell without passing `-p`.
 
@@ -31,7 +40,7 @@ To develop, run the checkout by hand instead: `systemctl --user stop thomas-shel
 
 Config-relative assets use `Quickshell.shellPath(...)`. The active theme id is stored under Quickshell's per-shell state directory, so the checkout does not need to live in `~/.config/quickshell`.
 
-Alternatively, `./install.sh` (see [Setup script](#setup-script-installsh)) can set quickshell up as a systemd user service instead of a bare `spawn-at-startup` — this gets you `Restart=on-failure` and `systemctl`-level start/stop/logs, at the cost of one extra setup step per machine.
+Running it as a systemd user service rather than a bare `spawn-at-startup` is what gets you `Restart=on-failure` and `systemctl`-level start/stop/logs; [`./install.sh shell`](#setup-script-installsh) installs the units.
 
 Useful IPC (examples):
 
@@ -58,7 +67,7 @@ Launcher action **Sync greeter theme and font** (search “greeter”) copies yo
 - [niri](https://github.com/niri-wm/niri)
 - A *Propo* [Nerd Font](https://www.nerdfonts.com/) — this config defaults to **CodeNewRoman Nerd Font Propo** (`ThemeEngine.fontFamily`)
 - [alacritty](https://alacritty.org/) (or change `Niri.terminal` in `shell/services/Niri.qml`)
-- The **Adwaita** cursor theme (`adwaita-cursors` on Arch, `adwaita-icon-theme` on Debian/Fedora). niri, the session environment (`environment.d/60-thomas-shell.conf`) and the greeter all set it at size 24 so the cursor looks the same everywhere. Change it in `niri/windows.kdl`, `systemd/environment.d/60-thomas-shell.conf` and `greeter/config.toml` together.
+- The **Adwaita** cursor theme (`adwaita-cursors` on Arch, `adwaita-icon-theme` on Debian/Fedora). niri, the session environment (`environment.d/60-thomas-shell.conf`) and the greeter all set it at size 24 so the cursor looks the same everywhere. Change it in the niri config repo's `cursor {}` block, `systemd/environment.d/60-thomas-shell.conf` and `greeter/config.toml` together.
 
 ### Bar / OSD / system services
 
@@ -126,7 +135,6 @@ common/                shared code (no shell.qml of its own — not runnable dir
   theme/               ThemeEngine, palettes, themes.json
   panel/               generic UI atoms: PanelSearchInput, PanelKeyHints, PanelSubtitle, AuthPrompt
   osd/                 OSDController, OSDHud, OSDPill (session + lockscreen + greeter)
-niri/                  compositor config (config.kdl + includes); symlinked from ~/.config/niri
 shell/                 the main Quickshell config (its own shell.qml)
   shell.qml            entrypoint
   bar/                 status bar + widgets/
@@ -139,7 +147,7 @@ shell/                 the main Quickshell config (its own shell.qml)
   common                symlink -> ../common
 greeter/               separate config for greetd (own shell.qml, common symlink -> ../common)
 callie/                git submodule: TUI calendar app, built by install.sh rust
-systemd/               optional systemd user units (installed by make; see below)
+systemd/               systemd user units + environment.d (installed by make, started by the niri config; see below)
 install.sh             optional setup script dispatcher: utils | shell | greeter | rust | all
 Makefile               `make install[-shell|-greeter|-units|-doc]`: plain files under a prefix
 polkit/                polkit action for the greeter theme sync script
@@ -167,15 +175,15 @@ install/               setup script parts: lib.sh (helpers), utils.sh, shell.sh,
 ```bash
 ./install.sh          # same as `all`
 ./install.sh utils    # dependency check only
-./install.sh shell    # niri symlink + systemd units only
+./install.sh shell    # install the shell + systemd units only
 ./install.sh greeter  # greetd/cage deployment only
 ./install.sh rust     # build callie (submodule) + cargo-install wlctl/bluetui
 ```
 
 - **`utils`** (`install/utils.sh`): reports which of the project's CLI tools are on `PATH` (`[ok]` / `[missing]`), mirroring the tools the QML actually invokes (`brightnessctl`, `fd`, `wlctl`, …) plus the `shell`/`greeter`/`rust` parts' own helpers (`systemctl`, `make`, `swayidle`, `greetd`, `cage`, `cargo`, …). Non-fatal — most are per-widget/feature. Stacks consumed only via Quickshell modules (NetworkManager, UPower, power-profiles-daemon, PipeWire, BlueZ, PAM) are listed in the tables above, not here. Also runs automatically before `shell`/`greeter`/`rust` (once for `all`), so missing tools are listed up front; it only warns, and a missing required tool still just fails its command under `set -e`.
 - **`shell`** (`install/shell.sh`):
-  - symlinks `~/.config/niri` to this checkout's `niri/` for the *current* user (backing up any pre-existing real directory first, after confirming). Run the script as each user who should log into niri via this repo's config — it's deliberately per-user rather than a single machine-wide path, so multiple accounts on one machine (including one shared by a single greeter) each resolve their own `~/.config/niri` independently.
-  - installs the shell and `systemd/thomas-shell.service` / `systemd/thomas-shell-swayidle.service` system-wide with `sudo make install-shell install-units` (to `$PREFIX/share/thomas-shell/shell` and `$PREFIX/lib/systemd/user`, which systemd searches for user units), plus the `environment.d` file that points `QS_CONFIG_PATH` at the installed shell. The session runs that installed copy, not the checkout, so re-run this step after changing the shell. Then `daemon-reload`s (which also re-reads `environment.d`) and wires both to start alongside `niri.service`. Log out and back in afterwards: a running niri keeps the `QS_CONFIG_PATH` it started with. This runs quickshell as a systemd **user** service tied to `graphical-session.target` instead of niri's own `spawn-at-startup` — you get `Restart=on-failure` and `systemctl --user status/restart/...`, at the cost of this one setup step per machine.
+  - the niri config is its own repo, cloned to `~/.config/niri` per user (see [niri config repo](https://github.com/thomaswallaceg/niri-config)); this script doesn't touch it.
+  - installs the shell and `systemd/thomas-shell.service` / `systemd/thomas-shell-swayidle.service` system-wide with `sudo make install-shell install-units` (to `$PREFIX/share/thomas-shell/shell` and `$PREFIX/lib/systemd/user`, which systemd searches for user units), plus the `environment.d` file that points `QS_CONFIG_PATH` at the installed shell. The session runs that installed copy, not the checkout, so re-run this step after changing the shell. Then `daemon-reload`s, which also re-reads `environment.d`. Log out and back in afterwards: a running niri keeps the `QS_CONFIG_PATH` it started with. The units are never `enable`d: the niri config's shell include runs `systemctl --user start thomas-shell.service` at startup, and that pulls in `thomas-shell-swayidle.service` (`Wants=`/`PartOf=`), so both follow the shell and both stop with `graphical-session.target` at logout. Running quickshell as a systemd **user** service rather than a bare `spawn-at-startup` gets you `Restart=on-failure` and `systemctl --user status/restart/...`; commenting out that one line in the niri config disables the whole thing.
   - Idle-triggered lock / display power-off / suspend is handled by the shell itself, not `swayidle` — see `shell/services/IdleManager.qml`, wired into `shell.qml`. It wraps Quickshell's own `IdleMonitor` (`ext-idle-notify-v1`, the same Wayland protocol `swayidle` uses) with timeouts bound live to `Quickshell.Services.UPower`'s `onBattery`: a tighter set (lock/monitors-off/suspend at 5/5.5/10 min) on battery, relaxed (15/16/30 min) otherwise — and since it's a live QML binding rather than a value picked once at process start, plugging in or unplugging takes effect immediately, no restart needed. `thomas-shell-swayidle.service` still runs, but stripped to just its `resume`/`before-sleep` hooks — those key off logind's `PrepareForSleep` DBus signal, which nothing in Quickshell wraps, and `before-sleep` is the only thing locking the screen before a suspend `IdleManager` didn't itself trigger (e.g. logind's own `HandleLidSwitch=suspend` default on lid close).
 - **`greeter`** (`install/greeter.sh`): runs `sudo make install-greeter` to install `common/` + `greeter/` under `$PREFIX/share/thomas-shell/` (default `/usr/local`; set `PREFIX` in the environment to change it). That's a real copy readable by the `greeter` system user, which usually can't see your home directory. It then symlinks the installed `greeter/config.toml` to `/etc/greetd/config.toml` (prompts before replacing a pre-existing real file), and enables `greetd`.
 - **`rust`** (`install/rust.sh`): checks out this repo's `callie/` git submodule, builds it with `cargo build --release`, and installs the resulting binary to `/usr/local/bin/callie` (needs `sudo`). Also builds the two third-party crates.io TUI tools `wlctl`/`bluetui`, pinned to known-good versions (`WLCTL_VERSION`/`BLUETUI_VERSION` at the top of `install/rust.sh`, e.g. `wlctl@0.1.9`) rather than tracked at latest — same reproducibility goal as `callie`'s pinned submodule commit, just via a plain version string instead of a git SHA since these aren't part of this repo. Built unprivileged into a persistent cache dir (`${XDG_CACHE_HOME:-$HOME/.cache}/shell-install/cargo-root`, so re-runs get incremental rebuilds), then installed to `/usr/local/bin` the same way as `callie` — so all three bar TUI helpers live in one system-wide location rather than a per-user `~/.cargo/bin`. Drops any pre-existing plain `cargo install` copies from `~/.cargo/bin` first, so there's exactly one copy of each on `PATH`. Before installing, it checks crates.io for a newer release of each pinned tool and prints a non-fatal warning if one exists (never bumps the pin itself — that's a deliberate edit + commit to `install/rust.sh`, same as bumping the `callie` submodule). `btop`/`wiremix` are left to your distro's package manager and aren't touched by this step.
@@ -190,8 +198,8 @@ install/               setup script parts: lib.sh (helpers), utils.sh, shell.sh,
 Run it from the repo root after changing the shell, greeter or units, to reinstall them.
 
 Two things it can't do for you:
-- **Remove `spawn-at-startup "quickshell"` from `niri/main.kdl`** after the `shell` part — leaving it in starts quickshell twice.
-- **The `shell` part needs `niri.service` to still pull in `graphical-session.target`** (`BindsTo=graphical-session.target` / `Before=graphical-session.target` in the packaged unit) — if you have a **full override** at `~/.config/systemd/user/niri.service` rather than a `niri.service.d/*.conf` drop-in, double check it didn't drop those lines; a full override *replaces* the packaged unit instead of merging with it.
+- **Set up the niri config**: it's a separate repo, cloned to `~/.config/niri` per user ([niri config repo](https://github.com/thomaswallaceg/niri-config)), and it's what starts the shell and carries the `qs ipc` keybinds.
+- **The units need `niri.service` to still pull in `graphical-session.target`** (`BindsTo=graphical-session.target` / `Before=graphical-session.target` in the packaged unit) — if you have a **full override** at `~/.config/systemd/user/niri.service` rather than a `niri.service.d/*.conf` drop-in, double check it didn't drop those lines; a full override *replaces* the packaged unit instead of merging with it.
 
 ## Installing with `make`
 
@@ -214,12 +222,12 @@ It only copies files: no prompts, no `systemctl`, nothing in `$HOME` or `/etc`. 
 
 ### Setup
 
-Install `greetd` and a minimal kiosk Wayland compositor to host the greeter, e.g. [cage](https://github.com/cage-kiosk/cage), then run [`./install.sh`](#setup-script-installsh) as **each user** who should be able to log in this way — its `shell` part (niri symlink) and `greeter` part (deployment) both need to run per-user/per-machine respectively; see below.
+Install `greetd` and a minimal kiosk Wayland compositor to host the greeter, e.g. [cage](https://github.com/cage-kiosk/cage), then run [`./install.sh`](#setup-script-installsh) as **each user** who should be able to log in this way — its `shell` part and `greeter` part need to run per-user and per-machine respectively; see below.
 
 To do it by hand instead:
-1. Symlink `~/.config/niri` to this repo's `niri/` for each user who logs in via this greeter (this is what makes login work for more than one account — see the note below):
+1. Clone the [niri config repo](https://github.com/thomaswallaceg/niri-config) to `~/.config/niri` for each user who logs in via this greeter (this is what makes login work for more than one account — see the note below):
    ```bash
-   ln -s "$PWD/niri" ~/.config/niri
+   git clone https://github.com/thomaswallaceg/niri-config.git ~/.config/niri
    ```
 2. Install `common/` and `greeter/` somewhere the greeter's system user (commonly `greeter`) can read:
    ```bash
