@@ -3,8 +3,8 @@
 # Split into parts under install/, dispatched by the subcommand below:
 #
 #   utils    report which of the project's CLI dependencies are installed
-#   shell    symlink ~/.config/niri -> this checkout's niri/, and install the
-#            systemd user units (quickshell + swayidle) for the current user
+#   shell    install the shell + its systemd user units system-wide (the niri
+#            config, its own repo in ~/.config/niri, is what starts them)
 #   greeter  greetd + cage, so greeter/ becomes the login screen (installs
 #            greeter/ via `make install-greeter` under $PREFIX, default /usr/local)
 #   rust     build+install the callie submodule, and cargo-install wlctl/bluetui
@@ -19,7 +19,6 @@
 set -euxo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 # Install prefix for the parts that go through the Makefile (same default).
 PREFIX="${PREFIX:-/usr/local}"
 INSTALL_DIR="$REPO_ROOT/install"
@@ -46,7 +45,7 @@ Usage: $(basename "${BASH_SOURCE[0]}") [utils|shell|greeter|rust|all]
 
   utils    report which CLI dependencies are installed (also runs
            first before every other target)
-  shell    symlink niri config + install systemd units (per-user)
+  shell    install the shell + systemd units (system-wide)
   greeter  install greetd + cage as the login screen
            (greeter files via make, under PREFIX=$PREFIX)
   rust     build callie (submodule) + cargo-install wlctl/bluetui

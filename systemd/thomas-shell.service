@@ -1,8 +1,11 @@
 [Unit]
 Description=Quickshell (niri shell)
+# Started by the niri config's shell include (`systemctl --user start
+# thomas-shell.service`), not by an [Install] section, so swapping shells is
+# a matter of commenting that line out. PartOf stops it again at logout.
 PartOf=graphical-session.target
 After=graphical-session.target
-Requisite=graphical-session.target
+Wants=thomas-shell-swayidle.service
 
 [Service]
 # QS_CONFIG_PATH and XCURSOR_* come from the user manager's environment
@@ -10,6 +13,3 @@ Requisite=graphical-session.target
 ExecStart=quickshell
 Restart=on-failure
 RestartSec=1
-
-[Install]
-WantedBy=graphical-session.target
