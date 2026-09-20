@@ -34,7 +34,7 @@ INSTALL ?= install
 # prefix.
 SUBST = sed -e 's|/usr/share/$(PKGNAME)|$(pkgdatadir)|g'
 
-UNITS := systemd/thomas-shell.service systemd/thomas-shell-swayidle.service
+UNITS := systemd/thomas-shell.service
 ENVFILE := systemd/environment.d/60-$(PKGNAME).conf
 POLICY := polkit/io.github.thomaswallaceg.$(PKGNAME).policy
 
