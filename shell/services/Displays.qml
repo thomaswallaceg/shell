@@ -9,8 +9,6 @@ import Quickshell
 Singleton {
   id: root
 
-  readonly property bool singleMonitor: Quickshell.screens.length <= 1
-
   // The screen with the smallest area (width * height) — the one "least
   // likely to be a primary/main display" when there's more than one.
   readonly property var smallestScreen: {
