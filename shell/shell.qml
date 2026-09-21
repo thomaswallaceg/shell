@@ -37,6 +37,9 @@ Scope {
   // Keep the singleton alive so it holds the sleep inhibitor and watches
   // logind — see SleepWatcher.qml.
   readonly property var _sleep: SleepWatcher
+  // Keep the singleton alive so its greetd probe runs at startup rather than
+  // when the launcher first opens — see GreeterSync.qml.
+  readonly property var _greeterSync: GreeterSync
   // Keep the singleton alive so its IpcHandler responds to
   // `qs ipc call coffee toggle` even before the bar widget/launcher touch it.
   readonly property var _coffee: CoffeeMode
@@ -48,4 +51,5 @@ Scope {
   OSD {}
   Lockscreen {}
   PowerConfirm {}
+  PolkitPrompt {}
 }

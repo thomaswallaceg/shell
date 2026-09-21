@@ -17,6 +17,8 @@ Singleton {
   // then by idx — mirrors the shape the bar previously read off Hyprland.workspaces.
   property var workspaces: []
   property string activeWindowTitle: ""
+  // niri's focused output (e.g. "DP-3"), matching ShellScreen.name.
+  property string focusedOutput: ""
 
   // Every event niri sends, forwarded as-is for callers that need more than
   // the state above.
@@ -24,6 +26,7 @@ Singleton {
 
   function refreshWorkspaces() { workspacesProc.running = true }
   function refreshActiveWindow() { activeWindowProc.running = true }
+  function refreshFocusedOutput() { focusedOutputProc.running = true }
 
   // `niri msg action <args>`. actionCommand is for callers that need to run it
   // as their own Process — e.g. to wait for it to finish (SleepWatcher.qml).
@@ -49,6 +52,23 @@ Singleton {
           }))
         } catch (e) {
           console.error("Niri: failed to parse workspaces:", e)
+        }
+      }
+    }
+  }
+
+  Process {
+    id: focusedOutputProc
+    command: ["niri", "msg", "--json", "focused-output"]
+    running: true
+    stdout: StdioCollector {
+      onStreamFinished: {
+        try {
+          const raw = text.trim()
+          const output = raw ? JSON.parse(raw) : null
+          root.focusedOutput = (output && output.name) || ""
+        } catch (e) {
+          console.error("Niri: failed to parse focused-output:", e)
         }
       }
     }
@@ -97,12 +117,14 @@ Singleton {
           case "WorkspaceActivated":
           case "WorkspaceActiveWindowChanged":
             root.refreshWorkspaces()
+            root.refreshFocusedOutput()
             break
           case "WindowsChanged":
           case "WindowFocusChanged":
           case "WindowOpenedOrChanged":
           case "WindowClosed":
             root.refreshActiveWindow()
+            root.refreshFocusedOutput()
             break
         }
 
