@@ -56,7 +56,7 @@ qs ipc call wallpaper pick
 
 Launcher action **Set wallpaper** (search “wallpaper”) opens a Zenity file dialog and applies the chosen image. The file is copied into the shell's own state directory and used from there, so moving or deleting the original later doesn't break it — and since the wallpaper is decoded at screen size on the fly, plugging in a bigger monitor still gets full resolution.
 
-Launcher action **Sync greeter theme and font** (search “greeter”) copies your current theme and font to the login screen. Your own theme/font choices only ever change your shell and lockscreen; the greeter is shared by every user, so changing it needs an admin's password. The action runs `shell/scripts/sync-greeter-preferences.sh` through `pkexec`, which checks the theme exists and writes `/etc/thomas-shell/greeter.json`. The greeter reads that file (read-only) and picks up changes on its next start. `make install-shell` installs a polkit policy for the script, so the password prompt says what it's for. It's a one-shot copy, not a live sync. No wallpaper equivalent yet; the greeter doesn't currently render one.
+Launcher action **Sync greeter theme and font** (search “greeter”) copies your current theme and font to the login screen. Your own theme/font choices only ever change your shell and lockscreen; the greeter is shared by every user, so changing it needs an admin's password. The action runs `shell/scripts/sync-greeter-preferences.sh` through `pkexec`, which checks the theme exists and writes `/etc/thomas-shell/greeter.json`. It only appears when greetd is running this repo's greeter — on a machine using another display manager it's hidden. The greeter reads that file (read-only) and picks up changes on its next start. `make install-shell` installs a polkit policy for the script, so the password prompt says what it's for. It's a one-shot copy, not a live sync. No wallpaper equivalent yet; the greeter doesn't currently render one.
 
 ## Dependencies
 
@@ -109,7 +109,7 @@ For Qt apps to follow qt6ct, the session needs `QT_QPA_PLATFORMTHEME=qt6ct` (e.g
 | `systemd-inhibit` | Reboot/shutdown confirm when apps hold logind inhibitors |
 | MPRIS (via Quickshell) | Play / pause / next / previous actions |
 | PipeWire (via Quickshell) | Toggle mute action |
-| `pkexec` | **Sync greeter theme and font** action (privilege escalation) |
+| `pkexec` | **Sync greeter theme and font** action (privilege escalation) — the shell is its own polkit agent (`shell/PolkitPrompt.qml`), so no external one (polkit-gnome, polkit-kde, …) is needed; disable any you have, since only one can register per session |
 | `jq` | **Sync greeter theme and font** action (`sync-greeter-preferences.sh`'s JSON edit) |
 
 ### Lockscreen
@@ -142,7 +142,7 @@ shell/                 the main Quickshell config (its own shell.qml)
   osd/                 session layer-shell OSD window
   wallpaper/           desktop wallpaper (Background layer-shell + WallpaperController)
   lockscreen/          session lock (Lockscreen, LockContext/PamContext, LockSurface)
-  services/            Niri (compositor adapter), TuiWindows, IdleManager, SleepWatcher, SystemInfo, Time, Displays
+  services/            Niri (compositor adapter), TuiWindows, IdleManager, SleepWatcher, GreeterSync, SystemInfo, Time, Displays
   common                symlink -> ../common
 greeter/               separate config for greetd (own shell.qml, common symlink -> ../common)
 callie/                git submodule: TUI calendar app, built by install.sh rust

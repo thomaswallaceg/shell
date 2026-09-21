@@ -28,7 +28,10 @@ Item {
         objects: [Pipewire.defaultAudioSink]
     }
 
-    readonly property var builtInActions: [
+    // Hidden where it can't work — see GreeterSync.available.
+    readonly property var builtInActions: root.allBuiltInActions.filter(a => a.action !== "sync-greeter-theme" || GreeterSync.available)
+
+    readonly property var allBuiltInActions: [
         {
             id: "__action__lock",
             kind: "action",
@@ -253,13 +256,7 @@ Item {
                 CoffeeMode.toggle();
                 break;
             case "sync-greeter-theme":
-                // pkexec: writes the admin-owned /etc/thomas-shell/greeter.json.
-                Quickshell.execDetached([
-                    "pkexec",
-                    Quickshell.shellPath("scripts/sync-greeter-preferences.sh"),
-                    ThemeEngine.currentId,
-                    ThemeEngine.savedFontFamily
-                ]);
+                GreeterSync.sync();
                 break;
             case "theme":
                 Quickshell.execDetached(["qs", "ipc", "call", "theme", "toggle"]);
