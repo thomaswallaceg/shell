@@ -605,7 +605,16 @@ Item {
             const path = openLocation
                 ? root.parentDirectory(entry.path)
                 : entry.path;
-            Quickshell.execDetached(["xdg-open", path]);
+            Quickshell.execDetached(["handlr", "open", path]);
+            root.closeRequested();
+            return;
+        } else if (entry.runInTerminal) {
+            // DesktopEntry.execute() ignores runInTerminal (Terminal=true),
+            // so TUI apps like btop would start with no terminal at all.
+            Quickshell.execDetached({
+                command: [TuiWindows.terminal, "-e", ...entry.command],
+                workingDirectory: entry.workingDirectory,
+            });
             root.closeRequested();
             return;
         }

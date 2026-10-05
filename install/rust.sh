@@ -1,5 +1,6 @@
 # Step: build+install this repo's callie submodule, and cargo-install the
-# third-party wlctl/bluetui TUI helpers the bar shells out to.
+# third-party wlctl/bluetui TUI helpers the bar shells out to, plus handlr
+# (crate handlr-regex), the launcher's file opener.
 # Sourced by install.sh; run_rust is its entrypoint.
 # Requires REPO_ROOT to already be set.
 
@@ -7,6 +8,7 @@
 # if crates.io has moved past what's pinned here — it never bumps for you).
 WLCTL_VERSION="0.1.9"
 BLUETUI_VERSION="0.8.0"
+HANDLR_VERSION="0.13.0"
 
 sync_callie_submodule() {
     if [ ! -f "$REPO_ROOT/.gitmodules" ] || ! grep -q '^\[submodule "callie"\]' "$REPO_ROOT/.gitmodules" 2>/dev/null; then
@@ -30,6 +32,7 @@ build_callie() {
 check_cargo_tool_update() {
     local crate="$1"
     local pinned="$2"
+    local pin_var="${3:-${crate^^}_VERSION}"
     local latest
 
     if ! command -v curl >/dev/null 2>&1; then
@@ -48,7 +51,7 @@ check_cargo_tool_update() {
     fi
 
     if [ "$latest" != "$pinned" ]; then
-        warn "$crate: pinned $pinned, crates.io has $latest available — bump ${crate^^}_VERSION in install/rust.sh if you want it."
+        warn "$crate: pinned $pinned, crates.io has $latest available — bump $pin_var in install/rust.sh if you want it."
     fi
 }
 
@@ -58,16 +61,18 @@ install_cargo_tools() {
 
     check_cargo_tool_update wlctl "$WLCTL_VERSION"
     check_cargo_tool_update bluetui "$BLUETUI_VERSION"
+    # Crate is handlr-regex, binary is handlr.
+    check_cargo_tool_update handlr-regex "$HANDLR_VERSION" HANDLR_VERSION
 
-    cargo uninstall wlctl bluetui 2>/dev/null || true
+    cargo uninstall wlctl bluetui handlr-regex 2>/dev/null || true
 
     # --quiet: the binaries are copied out to /usr/local/bin below, so
     # cargo's "add $install_root/bin to your PATH" warning doesn't apply.
     cargo install --quiet --locked --root "$install_root" \
-        "wlctl@$WLCTL_VERSION" "bluetui@$BLUETUI_VERSION"
+        "wlctl@$WLCTL_VERSION" "bluetui@$BLUETUI_VERSION" "handlr-regex@$HANDLR_VERSION"
 
-    sudo install -m 755 "$install_root/bin/wlctl" "$install_root/bin/bluetui" /usr/local/bin/
-    echo "Installed /usr/local/bin/wlctl and /usr/local/bin/bluetui"
+    sudo install -m 755 "$install_root/bin/wlctl" "$install_root/bin/bluetui" "$install_root/bin/handlr" /usr/local/bin/
+    echo "Installed /usr/local/bin/wlctl, /usr/local/bin/bluetui and /usr/local/bin/handlr"
 }
 
 run_rust() {

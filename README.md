@@ -91,18 +91,14 @@ For Qt apps to follow qt6ct, the session needs `QT_QPA_PLATFORMTHEME=qt6ct` (e.g
 | Widget | Command |
 |--------|---------|
 | CPU / temperature | `btop` |
-| Network | `wlctl` |
-| Bluetooth | `bluetui` |
 | Volume | `wiremix` |
-| Clock | `callie` |
 
-`callie` is this repo's own project (a git submodule, `callie/`) — build+install it with `./install.sh rust`. `wlctl` and `bluetui` are third-party crates from crates.io, installed the same way via `cargo install`. `btop`/`wiremix` come from your distro's package manager and are out of scope for `install.sh`.
+`btop`/`wiremix` come from your distro's package manager. The other click-throughs (`wlctl` for network, `bluetui` for bluetooth, `callie` for the clock) aren't dependencies: `./install.sh rust` builds and installs them (see [Setup script](#setup-script-installsh)).
 
 ### Launcher extras
 
 | Need | Used for |
 |------|----------|
-| `xdg-open` (`xdg-utils`) | Opening files / directories |
 | `fd` | File / directory search |
 | `qalc` (`libqalculate`) | Calculator — implicit multiplication, functions, units, etc. (`shell/services/Calculator.qml`) |
 | `systemctl` | Power actions (suspend / reboot / shut down) |
@@ -111,6 +107,8 @@ For Qt apps to follow qt6ct, the session needs `QT_QPA_PLATFORMTHEME=qt6ct` (e.g
 | PipeWire (via Quickshell) | Toggle mute action |
 | `pkexec` | **Sync greeter theme and font** action (privilege escalation) — the shell is its own polkit agent (`shell/PolkitPrompt.qml`), so no external one (polkit-gnome, polkit-kde, …) is needed; disable any you have, since only one can register per session |
 | `jq` | **Sync greeter theme and font** action (`sync-greeter-preferences.sh`'s JSON edit) |
+
+Opening files / directories goes through `handlr` (`handlr-regex`), which `./install.sh rust` installs. It follows `~/.config/mimeapps.list` and, unlike `xdg-open`, starts `Terminal=true` apps in a terminal: set `x-scheme-handler/terminal=Alacritty.desktop` in `mimeapps.list` to pick which.
 
 ### Lockscreen
 
@@ -176,16 +174,16 @@ install/               setup script parts: lib.sh (helpers), utils.sh, shell.sh,
 ./install.sh utils    # dependency check only
 ./install.sh shell    # install the shell + systemd units only
 ./install.sh greeter  # greetd/cage deployment only
-./install.sh rust     # build callie (submodule) + cargo-install wlctl/bluetui
+./install.sh rust     # build callie (submodule) + cargo-install wlctl/bluetui/handlr
 ```
 
-- **`utils`** (`install/utils.sh`): reports which of the project's CLI tools are on `PATH` (`[ok]` / `[missing]`), mirroring the tools the QML actually invokes (`brightnessctl`, `fd`, `wlctl`, …) plus the `shell`/`greeter`/`rust` parts' own helpers (`systemctl`, `make`, `greetd`, `cage`, `cargo`, …). Non-fatal — most are per-widget/feature. Stacks consumed only via Quickshell modules (NetworkManager, UPower, power-profiles-daemon, PipeWire, BlueZ, PAM) are listed in the tables above, not here. Also runs automatically before `shell`/`greeter`/`rust` (once for `all`), so missing tools are listed up front; it only warns, and a missing required tool still just fails its command under `set -e`.
+- **`utils`** (`install/utils.sh`): reports which of the project's CLI tools are on `PATH` (`[ok]` / `[missing]`), mirroring the tools the QML actually invokes (`brightnessctl`, `fd`, `qalc`, …) plus the `shell`/`greeter`/`rust` parts' own helpers (`systemctl`, `make`, `greetd`, `cage`, `cargo`, …). Non-fatal — most are per-widget/feature. Stacks consumed only via Quickshell modules (NetworkManager, UPower, power-profiles-daemon, PipeWire, BlueZ, PAM) are listed in the tables above, not here; neither are the tools the `rust` step installs itself (`callie`, `wlctl`, `bluetui`, `handlr`). Also runs automatically before `shell`/`greeter`/`rust` (once for `all`), so missing tools are listed up front; it only warns, and a missing required tool still just fails its command under `set -e`.
 - **`shell`** (`install/shell.sh`):
   - the niri config is its own repo, cloned to `~/.config/niri` per user (see [niri config repo](https://github.com/thomaswallaceg/niri-config)); this script doesn't touch it.
   - installs the shell and `systemd/thomas-shell.service` system-wide with `sudo make install-shell install-units` (to `$PREFIX/share/thomas-shell/shell` and `$PREFIX/lib/systemd/user`, which systemd searches for user units), plus the `environment.d` file that points `QS_CONFIG_PATH` at the installed shell. The session runs that installed copy, not the checkout, so re-run this step after changing the shell. Then `daemon-reload`s, which also re-reads `environment.d`. Log out and back in afterwards: a running niri keeps the `QS_CONFIG_PATH` it started with. The unit is never `enable`d: the niri config's shell include runs `systemctl --user start thomas-shell.service` at startup, and `PartOf=graphical-session.target` stops it again at logout. Running quickshell as a systemd **user** service rather than a bare `spawn-at-startup` gets you `Restart=on-failure` and `systemctl --user status/restart/...`; commenting out that one line in the niri config disables the whole thing.
   - Idle-triggered lock / display power-off / suspend is handled by the shell itself — see `shell/services/IdleManager.qml`, wired into `shell.qml`. It wraps Quickshell's own `IdleMonitor` (`ext-idle-notify-v1`) with timeouts bound live to `Quickshell.Services.UPower`'s `onBattery`: a tighter set (lock/monitors-off/suspend at 5/5.5/10 min) on battery, relaxed (15/16/30 min) otherwise — and since it's a live QML binding rather than a value picked once at process start, plugging in or unplugging takes effect immediately, no restart needed. Suspends the shell didn't trigger (lid close, `systemctl suspend`, low battery) are covered by `shell/services/SleepWatcher.qml`, which holds a logind delay inhibitor and, when logind announces `PrepareForSleep`, blanks the monitors and locks before letting the machine sleep — blanking first so the lockscreen doesn't flash on the way down. On resume it powers the monitors back on.
 - **`greeter`** (`install/greeter.sh`): runs `sudo make install-greeter` to install `common/` + `greeter/` under `$PREFIX/share/thomas-shell/` (default `/usr/local`; set `PREFIX` in the environment to change it). That's a real copy readable by the `greeter` system user, which usually can't see your home directory. It then symlinks the installed `greeter/config.toml` to `/etc/greetd/config.toml` (prompts before replacing a pre-existing real file), and enables `greetd`.
-- **`rust`** (`install/rust.sh`): checks out this repo's `callie/` git submodule, builds it with `cargo build --release`, and installs the resulting binary to `/usr/local/bin/callie` (needs `sudo`). Also builds the two third-party crates.io TUI tools `wlctl`/`bluetui`, pinned to known-good versions (`WLCTL_VERSION`/`BLUETUI_VERSION` at the top of `install/rust.sh`, e.g. `wlctl@0.1.9`) rather than tracked at latest — same reproducibility goal as `callie`'s pinned submodule commit, just via a plain version string instead of a git SHA since these aren't part of this repo. Built unprivileged into a persistent cache dir (`${XDG_CACHE_HOME:-$HOME/.cache}/shell-install/cargo-root`, so re-runs get incremental rebuilds), then installed to `/usr/local/bin` the same way as `callie` — so all three bar TUI helpers live in one system-wide location rather than a per-user `~/.cargo/bin`. Drops any pre-existing plain `cargo install` copies from `~/.cargo/bin` first, so there's exactly one copy of each on `PATH`. Before installing, it checks crates.io for a newer release of each pinned tool and prints a non-fatal warning if one exists (never bumps the pin itself — that's a deliberate edit + commit to `install/rust.sh`, same as bumping the `callie` submodule). `btop`/`wiremix` are left to your distro's package manager and aren't touched by this step.
+- **`rust`** (`install/rust.sh`): checks out this repo's `callie/` git submodule, builds it with `cargo build --release`, and installs the resulting binary to `/usr/local/bin/callie` (needs `sudo`). Also builds the third-party crates.io tools `wlctl`/`bluetui` (bar TUI helpers) and `handlr` (crate `handlr-regex`, the launcher's file opener), pinned to known-good versions (`WLCTL_VERSION`/`BLUETUI_VERSION`/`HANDLR_VERSION` at the top of `install/rust.sh`, e.g. `wlctl@0.1.9`) rather than tracked at latest — same reproducibility goal as `callie`'s pinned submodule commit, just via a plain version string instead of a git SHA since these aren't part of this repo. Built unprivileged into a persistent cache dir (`${XDG_CACHE_HOME:-$HOME/.cache}/shell-install/cargo-root`, so re-runs get incremental rebuilds), then installed to `/usr/local/bin` the same way as `callie` — so all of them live in one system-wide location rather than a per-user `~/.cargo/bin`. Drops any pre-existing plain `cargo install` copies from `~/.cargo/bin` first, so there's exactly one copy of each on `PATH`. Before installing, it checks crates.io for a newer release of each pinned tool and prints a non-fatal warning if one exists (never bumps the pin itself — that's a deliberate edit + commit to `install/rust.sh`, same as bumping the `callie` submodule). `btop`/`wiremix` are left to your distro's package manager and aren't touched by this step.
 
   **One-time prerequisite**, before `rust` can build `callie` for the first time: `install.sh` never edits `.gitmodules` itself, so add the submodule once from the repo root:
   ```bash
