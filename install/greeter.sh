@@ -7,7 +7,7 @@ greeter_install_dir() {
 }
 
 deploy_greeter_files() {
-    sudo make -C "$REPO_ROOT" PREFIX="$PREFIX" install-greeter
+    run sudo make -s -C "$REPO_ROOT" PREFIX="$PREFIX" install-greeter
 }
 
 configure_greetd() {
@@ -17,22 +17,22 @@ configure_greetd() {
     src="$(greeter_install_dir)/config.toml"
     local dest=/etc/greetd/config.toml
 
-    sudo mkdir -p "$(dirname "$dest")"
+    run sudo mkdir -p "$(dirname "$dest")"
 
     if [ -L "$dest" ]; then
         if [ "$(readlink -f "$dest")" = "$(readlink -f "$src")" ]; then
             return 0
         fi
         warn "$dest is a symlink pointing elsewhere; relinking to $src."
-        sudo rm "$dest"
+        run sudo rm "$dest"
     elif [ -e "$dest" ]; then
         warn "$dest already exists and is not a symlink."
         local reply
         read -r -p "Back it up to $dest.bak and replace with a symlink to $src? [y/N] " reply </dev/tty
         case "$reply" in
             y|Y|yes|YES)
-                sudo rm -rf "$dest.bak"
-                sudo mv "$dest" "$dest.bak"
+                run sudo rm -rf "$dest.bak"
+                run sudo mv "$dest" "$dest.bak"
                 ;;
             *)
                 warn "Skipping greetd config symlink."
@@ -41,12 +41,11 @@ configure_greetd() {
         esac
     fi
 
-    sudo ln -s "$src" "$dest"
-    echo "Linked $dest -> $src"
+    run sudo ln -s "$src" "$dest"
 }
 
 enable_greetd() {
-    sudo systemctl enable --now greetd
+    run sudo systemctl enable --now greetd
 }
 
 run_greeter() {

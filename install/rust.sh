@@ -15,16 +15,16 @@ sync_callie_submodule() {
         warn "callie/ is not registered as a submodule yet; see README.md's one-time 'git submodule add' step. Skipping callie build."
         return 1
     fi
-    git -C "$REPO_ROOT" submodule update --init --recursive -- callie
+    run git -C "$REPO_ROOT" submodule update --quiet --init --recursive -- callie
 }
 
 build_callie() {
     local target_bin="$REPO_ROOT/callie/target/release/callie"
 
-    ( cd "$REPO_ROOT/callie" && cargo build --release )
+    # Not --quiet: a first build takes a while, and the progress shows it's moving.
+    run cargo build --release --manifest-path "$REPO_ROOT/callie/Cargo.toml"
 
-    sudo install -m 755 "$target_bin" /usr/local/bin/callie
-    echo "Installed /usr/local/bin/callie"
+    run sudo install -m 755 "$target_bin" /usr/local/bin/callie
 }
 
 # Non-fatal heads-up that a pinned crates.io version above is out of date —
@@ -68,11 +68,10 @@ install_cargo_tools() {
 
     # --quiet: the binaries are copied out to /usr/local/bin below, so
     # cargo's "add $install_root/bin to your PATH" warning doesn't apply.
-    cargo install --quiet --locked --root "$install_root" \
+    run cargo install --quiet --locked --root "$install_root" \
         "wlctl@$WLCTL_VERSION" "bluetui@$BLUETUI_VERSION" "handlr-regex@$HANDLR_VERSION"
 
-    sudo install -m 755 "$install_root/bin/wlctl" "$install_root/bin/bluetui" "$install_root/bin/handlr" /usr/local/bin/
-    echo "Installed /usr/local/bin/wlctl, /usr/local/bin/bluetui and /usr/local/bin/handlr"
+    run sudo install -m 755 "$install_root/bin/wlctl" "$install_root/bin/bluetui" "$install_root/bin/handlr" /usr/local/bin/
 }
 
 run_rust() {
