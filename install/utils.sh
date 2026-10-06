@@ -22,6 +22,7 @@ check_dependencies() {
         "wiremix|Bar volume click-through"
         "cargo|Rust toolchain (this script's rust step: cargo build/install)"
         "curl|crates.io version-pin check (this script's rust step, non-fatal if missing)"
+        "timeout|Launcher file search time limit (coreutils)"
         "zenity|Wallpaper file picker (launcher / qs ipc wallpaper pick)"
         "pkexec|Launcher's \"Sync theme to greeter\" action"
         "jq|Launcher's \"Sync theme to greeter\" action (sync-greeter-preferences.sh)"

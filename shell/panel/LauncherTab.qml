@@ -19,6 +19,11 @@ Item {
     readonly property int fileSearchMinLength: 3
     // Launcher only fits ~5-6 rows without scrolling — 20 was just noise.
     readonly property int fileSearchMaxResults: 10
+    // Guards against pathological searches (huge trees, slow or network
+    // mounts): fd is stopped after this long, or after this many paths, and
+    // skim ranks whatever had arrived by then.
+    readonly property int fileSearchTimeoutSec: 2
+    readonly property int fileSearchMaxPaths: 1000000
 
     property var fileResults: []
     property bool fileSearching: false
@@ -287,10 +292,18 @@ Item {
         return path;
     }
 
-    function parseFileResults(text) {
-        const lines = text.trim() === ""
+    function parseFileResults(text, pattern) {
+        const all = text.trim() === ""
             ? []
-            : text.trim().split("\n").filter(line => line.length > 0).slice(0, root.fileSearchMaxResults);
+            : text.trim().split("\n").filter(line => line.length > 0);
+        // skim scores "name starts with the query" the same whether or not
+        // the name is exactly the query, so a longer exact match (…/go/cfg)
+        // can trail shorter prefix matches (cfgmgr32.dll). Lift exact names
+        // to the top, keeping skim's order otherwise.
+        const wanted = (pattern ?? "").toLowerCase();
+        const isExact = line => root.basename(line.slice(2)).toLowerCase() === wanted;
+        const lines = [...all.filter(isExact), ...all.filter(l => !isExact(l))]
+            .slice(0, root.fileSearchMaxResults);
 
         return lines.map((line, i) => {
             const isDir = line.startsWith("d:");
@@ -330,35 +343,37 @@ Item {
         fileSearching = true;
 
         const home = Quickshell.env("HOME") || ".";
-        // "*"/"?"/"[" -> glob matching instead of a literal substring, so
-        // e.g. "*.qml" or "foo?ar" work as expected.
-        const matchFlag = /[*?[]/.test(pattern) ? "-g" : "-F";
-        // A "/" in the query means they're narrowing by path (e.g.
-        // "projects/foo"), not just a filename — fd only matches filenames
-        // by default, so a path fragment would otherwise silently match
-        // nothing. Left off for slash-less queries so a common word doesn't
-        // suddenly match every file under a same-named directory.
-        const pathFlag = pattern.includes("/") ? "-p" : "";
-        const cap = root.fileSearchMaxResults;
-        // Visible matches first, then hidden-only paths underneath (still capped).
-        // Pattern/home/flags as $1.. to avoid injection.
+        // fd lists paths (hidden included), skim ranks them: fzf-style scoring
+        // (matches at the start of a name first), shortest path on ties.
+        //   name: fuzzy against the last path component only, so ".config"
+        //         finds ~/.config and ~/.config/niri/.config, not ~/.config/niri.
+        //   path: a "/" means they're narrowing by path ("projects/foo"), so
+        //         match the whole path instead.
+        //   glob: "*"/"?"/"[" are fd globs ("*.qml", "foo?ar"); skim has no
+        //         globs, so fd matches and skim only sorts shortest-first.
+        const mode = /[*?[]/.test(pattern) ? "glob"
+            : pattern.includes("/") ? "path"
+            : "name";
+        // A few spare candidates beyond the shown rows, so exact-name matches
+        // further down can be moved to the top (parseFileResults).
+        const cap = root.fileSearchMaxResults * 5;
+        // Pattern/home/flags as $1.. to avoid injection. fd's --format '{}'
+        // drops the trailing "/" on directories, which would otherwise hide
+        // their name from skim's last-field (--nth=-1) matching.
         fileSearchProc.command = [
             "sh", "-c",
-            'pattern="$1"; home="$2"; match_flag="$3"; path_flag="$4"; cap="$5"; ' +
+            'pattern="$1"; home="$2"; mode="$3"; cap="$4"; secs="$5"; max="$6"; ' +
+            'list() { timeout "$secs" fd --hidden --type f --type d --format "{}" --max-results "$max" "$@"; }; ' +
             'tag() { while IFS= read -r p; do [ -d "$p" ] && echo "d:$p" || echo "f:$p"; done; }; ' +
-            'is_hidden() { ' +
-            '  oldifs=$IFS; IFS=/; ' +
-            '  for part in $1; do ' +
-            '    [ -n "$part" ] || continue; ' +
-            '    [ "$part" = "." ] || [ "$part" = ".." ] && continue; ' +
-            '    [ "${part#.}" != "$part" ] && { IFS=$oldifs; return 0; }; ' +
-            '  done; ' +
-            '  IFS=$oldifs; return 1; ' +
-            '}; ' +
-            'fd --type f --type d "$match_flag" $path_flag --max-results "$cap" -- "$pattern" "$home" | tag; ' +
-            'fd --hidden --type f --type d "$match_flag" $path_flag --max-results "$((cap * 2))" -- "$pattern" "$home" | ' +
-            'while IFS= read -r p; do is_hidden "$p" && echo "$p"; done | head -"$cap" | tag',
-            "file-search", pattern, home, matchFlag, pathFlag, String(cap)
+            'case "$mode" in ' +
+            '  glob) case "$pattern" in */*) pf=-p ;; *) pf= ;; esac; ' +
+            '        list -g $pf -- "$pattern" "$home" | sk --filter "" --tiebreak=length ;; ' +
+            '  path) list -- . "$home" | sk --filter "$pattern" --tiebreak=score,length ;; ' +
+            '  *)    list -- . "$home" | sk --filter "$pattern" -d / --nth=-1 --tiebreak=score,length ;; ' +
+            // 2>/dev/null: sk reports "Broken pipe" once head has enough.
+            'esac 2>/dev/null | head -n "$cap" | tag',
+            "file-search", pattern, home, mode, String(cap),
+            String(root.fileSearchTimeoutSec), String(root.fileSearchMaxPaths)
         ];
         fileSearchProc.generation = gen;
         fileSearchProc.running = false;
@@ -477,7 +492,7 @@ Item {
                     return;
                 }
 
-                root.fileResults = root.parseFileResults(text);
+                root.fileResults = root.parseFileResults(text, fileQuery.pattern);
                 root.fileSearching = false;
 
                 // Prefix mode: jump to the first file. Inline mode: keep the
