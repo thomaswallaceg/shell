@@ -7,7 +7,8 @@
 #            config, its own repo in ~/.config/niri, is what starts them)
 #   greeter  greetd + cage, so greeter/ becomes the login screen (installs
 #            greeter/ via `make install-greeter` under $PREFIX, default /usr/local)
-#   rust     build+install the callie submodule, and cargo-install wlctl/bluetui
+#   rust     build+install the callie submodule, and cargo-install
+#            wlctl/bluetui/handlr/fend/fd
 #   all      run all of the above, in the order listed (default)
 #
 # `utils` also runs first before `shell`, `greeter` and `rust`
@@ -54,7 +55,8 @@ Usage: [VERBOSE=1] $(basename "${BASH_SOURCE[0]}") [utils|shell|greeter|rust|all
   shell    install the shell + systemd units (system-wide)
   greeter  install greetd + cage as the login screen
            (greeter files via make, under PREFIX=$PREFIX)
-  rust     build callie (submodule) + cargo-install wlctl/bluetui
+  rust     build callie (submodule) + cargo-install
+           wlctl/bluetui/handlr/fend/fd
   all      run all of the above (default)
 EOF
 }

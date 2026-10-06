@@ -1,6 +1,7 @@
 # Step: build+install this repo's callie submodule, and cargo-install the
 # third-party wlctl/bluetui TUI helpers the bar shells out to, plus handlr
-# (crate handlr-regex), the launcher's file opener.
+# (crate handlr-regex), the launcher's file opener, fd (crate fd-find), its
+# file search, and fend, its calculator.
 # Sourced by install.sh; run_rust is its entrypoint.
 # Requires REPO_ROOT to already be set.
 
@@ -9,6 +10,8 @@
 WLCTL_VERSION="0.1.9"
 BLUETUI_VERSION="0.8.0"
 HANDLR_VERSION="0.13.0"
+FEND_VERSION="1.5.8"
+FD_VERSION="10.5.0"
 
 sync_callie_submodule() {
     if [ ! -f "$REPO_ROOT/.gitmodules" ] || ! grep -q '^\[submodule "callie"\]' "$REPO_ROOT/.gitmodules" 2>/dev/null; then
@@ -63,15 +66,20 @@ install_cargo_tools() {
     check_cargo_tool_update bluetui "$BLUETUI_VERSION"
     # Crate is handlr-regex, binary is handlr.
     check_cargo_tool_update handlr-regex "$HANDLR_VERSION" HANDLR_VERSION
+    check_cargo_tool_update fend "$FEND_VERSION"
+    # Crate is fd-find, binary is fd. From crates.io rather than the distro
+    # because Debian/Ubuntu package it as `fdfind`.
+    check_cargo_tool_update fd-find "$FD_VERSION" FD_VERSION
 
-    cargo uninstall wlctl bluetui handlr-regex 2>/dev/null || true
+    cargo uninstall wlctl bluetui handlr-regex fend fd-find 2>/dev/null || true
 
     # --quiet: the binaries are copied out to /usr/local/bin below, so
     # cargo's "add $install_root/bin to your PATH" warning doesn't apply.
     run cargo install --quiet --locked --root "$install_root" \
-        "wlctl@$WLCTL_VERSION" "bluetui@$BLUETUI_VERSION" "handlr-regex@$HANDLR_VERSION"
+        "wlctl@$WLCTL_VERSION" "bluetui@$BLUETUI_VERSION" "handlr-regex@$HANDLR_VERSION" \
+        "fend@$FEND_VERSION" "fd-find@$FD_VERSION"
 
-    run sudo install -m 755 "$install_root/bin/wlctl" "$install_root/bin/bluetui" "$install_root/bin/handlr" /usr/local/bin/
+    run sudo install -m 755 "$install_root/bin/wlctl" "$install_root/bin/bluetui" "$install_root/bin/handlr" "$install_root/bin/fend" "$install_root/bin/fd" /usr/local/bin/
 }
 
 run_rust() {

@@ -495,7 +495,7 @@ Item {
         function onSearchTextChanged() {
             // ">" (run mode) and "?" (files-only) never show a calc entry
             // (see the ScriptModel's values: binding) — no point spawning
-            // qalc for text in either of those modes.
+            // fend for text in either of those modes.
             const trimmed = panelTab.searchText.trim();
             if (trimmed.startsWith(">") || trimmed.startsWith("?"))
                 Calculator.clear();
@@ -554,7 +554,7 @@ Item {
             const calc = Calculator.hasResult ? {
                 id: "__calc__",
                 kind: "calc",
-                name: "= " + Calculator.result,
+                name: (Calculator.approximate ? "≈ " : "= ") + Calculator.result,
                 genericName: "Copy result to clipboard",
                 result: Calculator.result,
                 icon: ""
