@@ -19,6 +19,17 @@ Column {
     property string accessibleName: placeholder
     property int echoMode: TextInput.Normal
     property bool waiting: false
+    // False swaps the input out for a status line. For a backend whose current
+    // step isn't a question — polkit sitting inside pam_fprintd, which asks
+    // nothing until the reader matches or times out — a password box would
+    // invite input PAM isn't listening for, so the card shows what it's
+    // waiting on instead. Callers that always have a question leave this true.
+    property bool inputVisible: true
+    // Glyph shown in the input's place while `inputVisible` is false. What
+    // the card is waiting for is said once, on the help line below, so this
+    // carries no text of its own.
+    property string statusIcon: ""
+    property color statusIconColor: Theme.accentPrimary
     property string helpText: ""
     property string helpTextStatus: "normal" // normal | error
     property var keyHints: []
@@ -41,8 +52,13 @@ Column {
         inputField.clear();
     }
 
+    // The keyboard lives on whichever of the two the card is currently
+    // showing, so callers can keep calling this across a phase change.
     function focusInput() {
-        inputField.focusInput();
+        if (root.inputVisible)
+            inputField.focusInput();
+        else
+            factorRow.forceActiveFocus();
     }
 
     function cycleIdentity(direction) {
@@ -52,6 +68,17 @@ Column {
         const from = root.selectedIdentityIndex < 0 ? 0 : root.selectedIdentityIndex;
         root.identitySelected((from + direction + count) % count);
     }
+
+    // A disabled item can't hold active focus, so the input drops it the
+    // moment `waiting` goes true and never gets it back on its own — leaving
+    // the card enabled but dead to the keyboard once the attempt finishes.
+    // The lockscreen only avoided this because its clear() re-focuses; a
+    // caller with nothing to clear (polkit falling through to its password
+    // prompt) needs the focus handed back explicitly.
+    onWaitingChanged: if (!waiting && root.visible) focusInput()
+    // Same handover the other way: neither half can hold focus while hidden,
+    // so the phase change has to pass it along.
+    onInputVisibleChanged: if (root.visible) focusInput()
 
     spacing: 24
 
@@ -187,6 +214,7 @@ Column {
 
             PanelSearchInput {
                 id: inputField
+                visible: root.inputVisible
                 // The account line already stands off the subtitle above it.
                 Layout.topMargin: identityRow.visible ? 0 : 6
                 enabled: !root.waiting
@@ -207,6 +235,48 @@ Column {
                 onNavigate: direction => root.cycleIdentity(direction)
 
                 Behavior on opacity { NumberAnimation { duration: 150 } }
+            }
+
+            // Stands in for the input on a step that isn't asking anything.
+            // It holds the keyboard itself — a hidden item can't — so Escape
+            // and the account keys keep working with no field on the card.
+            // Matches the input's height so the card doesn't resize when the
+            // two swap.
+            FocusScope {
+                id: factorRow
+                visible: !root.inputVisible
+                focus: !root.inputVisible
+                Layout.fillWidth: true
+                Layout.topMargin: identityRow.visible ? 0 : 6
+                implicitHeight: 44
+
+                Keys.onEscapePressed: root.cancelled()
+                Keys.onPressed: event => {
+                    if (event.key === Qt.Key_Up || event.key === Qt.Key_Backtab) {
+                        event.accepted = true;
+                        root.cycleIdentity(-1);
+                    } else if (event.key === Qt.Key_Down || event.key === Qt.Key_Tab) {
+                        event.accepted = true;
+                        root.cycleIdentity(1);
+                    }
+                }
+
+                Text {
+                    anchors.centerIn: parent
+                    text: root.statusIcon
+                    color: root.statusIconColor
+                    font.pixelSize: Math.round(ThemeEngine.fontSizeIcon * 1.4)
+                    font.family: ThemeEngine.fontFamily
+
+                    // Breathes, so the card still reads as waiting on you
+                    // now that there's no spinner to say so.
+                    SequentialAnimation on opacity {
+                        running: factorRow.visible
+                        loops: Animation.Infinite
+                        NumberAnimation { from: 1.0; to: 0.45; duration: 900; easing.type: Easing.InOutQuad }
+                        NumberAnimation { from: 0.45; to: 1.0; duration: 900; easing.type: Easing.InOutQuad }
+                    }
+                }
             }
 
             Text {

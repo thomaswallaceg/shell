@@ -15,6 +15,33 @@ import qs.services
 // Only one agent may register per session — disable any other one first, or
 // registration fails (the warning below says so).
 //
+// On a machine whose polkit PAM stack runs pam_fprintd (Fedora's
+// authselect `with-fingerprint` puts it in system-auth, which
+// /usr/lib/pam.d/polkit-1 includes wholesale), every request opens inside the
+// fingerprint module rather than at a password prompt. PAM is serialised by
+// design — pam_fprintd(8) LIMITATIONS spells out that one stack cannot offer
+// a password and a finger at once — so the flow sits with isResponseRequired
+// false, emitting informational messages only, until the reader matches or
+// its timeout (30s by default) drops through to pam_unix:
+//
+//     t+0.5s   info    "Place your finger on the fingerprint reader"
+//     t+30.5s  info    "Verification timed out"
+//     t+30.6s  prompt  "Password: "
+//
+// So the card runs in two phases, the way sudo does in a terminal: while PAM
+// is inside pam_fprintd it shows the reader's own instruction and no input at
+// all, and the password field only appears once polkit actually asks for one.
+//
+// There is deliberately no "use password instead" affordance. Ctrl+C works in
+// a terminal because pam_fprintd watches SIGINT on a signalfd and stops the
+// verification early — but signalfd only receives signals that are *blocked*,
+// pam_fprintd doesn't block SIGINT itself, and polkit-agent-helper-1 (the
+// setuid process that runs the stack) does no signal handling and inherits
+// quickshell's disposition, which has SIGINT ignored rather than blocked. An
+// ignored signal is discarded instead of queued, so a SIGINT aimed at the
+// helper is silently dropped. Reaching it would need Quickshell to block
+// SIGINT around the helper spawn, which QML can't ask for.
+//
 // A request that arrives while the session is locked is deliberately left
 // pending rather than cancelled: ext-session-lock shows only lock surfaces, so
 // this prompt is hidden until unlock and then appears. That's what the
@@ -28,6 +55,20 @@ Scope {
     // A flow exists from the moment a request starts until it completes; the
     // prompt is only shown while it's live.
     readonly property bool active: flow !== null && !flow.isCompleted
+
+    // Set from the moment a response is handed over until PAM asks for
+    // another one or the flow ends, and the only state that disables the
+    // field. It also keeps the card from falling back to its fingerprint
+    // phase while a submitted password is being checked: submit() clears
+    // isResponseRequired, which on its own reads exactly like the reader
+    // being live again.
+    property bool responsePending: false
+
+    // PAM is on a step that isn't asking us anything — the reader. Drives the
+    // fingerprint phase of the card. On a machine with no pam_fprintd this is
+    // true only for the few ms before pam_unix's prompt arrives.
+    readonly property bool awaitingExternalFactor: flow !== null
+        && !flow.isCompleted && !flow.isResponseRequired && !responsePending
 
     // Tab (or a click on the name) only moves which account the card shows;
     // polkit isn't told until a password is actually being typed for it. That
@@ -74,7 +115,25 @@ Scope {
     Connections {
         target: root.flow
 
+        // Reaching a prompt means whatever we'd already handed over has been
+        // consumed, so the field goes live again — and the note explaining a
+        // queued password goes away, while a real error stays up.
+        function onIsResponseRequiredChanged() {
+            if (!root.flow || !root.flow.isResponseRequired)
+                return;
+
+            root.responsePending = false;
+            if (!root.statusIsError)
+                root.statusText = "";
+        }
+
+        function onIsCompletedChanged() {
+            if (root.flow && root.flow.isCompleted)
+                root.responsePending = false;
+        }
+
         function onAuthenticationFailed() {
+            root.responsePending = false;
             if (identitySwitchGrace.running) {
                 identitySwitchGrace.stop();
                 return;
@@ -144,6 +203,7 @@ Scope {
         statusText = "";
         statusIsError = false;
         pendingIdentityIndex = -1;
+        responsePending = false;
     }
 
     PolkitAgent {
@@ -280,25 +340,36 @@ Scope {
                 // polkit can ask for something that should be echoed (a PIN
                 // pad code, say) rather than a password.
                 echoMode: root.flow && root.flow.responseVisible ? TextInput.Normal : TextInput.Password
-                // Also gated on isCompleted so a finished flow can't leave the
-                // field stuck disabled behind an "Authenticating…" line.
-                waiting: root.flow ? !root.flow.isResponseRequired && !root.flow.isCompleted : false
+                waiting: root.responsePending
+                // No password box while PAM is inside the fingerprint module:
+                // it isn't reading, so the reader's instruction takes the
+                // field's place until polkit asks for a password.
+                inputVisible: !root.awaitingExternalFactor
+                // nf-md-fingerprint. pam_fprintd's own wording ("Place your
+                // finger on the fingerprint reader", or a match failure) goes
+                // to the help line below via supplementaryMessage, so the
+                // icon deliberately doesn't repeat it.
+                statusIcon: "󰈷"
+                statusIconColor: root.flow && root.flow.supplementaryIsError
+                    ? Theme.accentRed
+                    : Theme.accentPrimary
                 helpText: root.statusText !== "" ? root.statusText : (root.flow ? root.flow.supplementaryMessage : "")
                 helpTextStatus: root.statusIsError || (root.flow && root.flow.supplementaryIsError) ? "error" : "normal"
                 // The chooser row hides itself when there's only one account,
                 // so the hint for it comes and goes with it.
                 identityNames: root.identityNames
                 selectedIdentityIndex: root.shownIdentityIndex
-                keyHints: root.identityNames.length > 1
-                    ? [
-                        { key: "⏎", label: "authenticate" },
-                        { key: "⇥", label: "switch user" },
-                        { key: "esc", label: "cancel" }
-                    ]
-                    : [
-                        { key: "⏎", label: "authenticate" },
-                        { key: "esc", label: "cancel" }
-                    ]
+                // Nothing to submit during the fingerprint phase, so the
+                // hints follow whatever the card is actually showing.
+                keyHints: {
+                    const hints = [];
+                    if (!root.awaitingExternalFactor)
+                        hints.push({ key: "⏎", label: "authenticate" });
+                    if (root.identityNames.length > 1)
+                        hints.push({ key: "⇥", label: "switch user" });
+                    hints.push({ key: "esc", label: "cancel" });
+                    return hints;
+                }
 
                 onActivated: text => {
                     if (!root.flow)
@@ -315,6 +386,7 @@ Scope {
                     identitySwitchGrace.stop();
                     root.statusText = "";
                     root.statusIsError = false;
+                    root.responsePending = true;
                     root.flow.submit(text);
                 }
 
