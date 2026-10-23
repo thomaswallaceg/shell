@@ -19,15 +19,10 @@ check_dependencies() {
         "gsettings|GTK/libadwaita light/dark preference (ThemeEngine)"
         "qt6ct|Qt6 app light/dark preference (ThemeEngine)"
         "btop|Bar CPU/temperature click-through"
-        "wlctl|Bar network click-through"
-        "bluetui|Bar bluetooth click-through"
         "wiremix|Bar volume click-through"
-        "callie|Bar clock click-through"
         "cargo|Rust toolchain (this script's rust step: cargo build/install)"
         "curl|crates.io version-pin check (this script's rust step, non-fatal if missing)"
-        "xdg-open|Launcher file/directory opening"
-        "fd|Launcher file search"
-        "qalc|Launcher calculator (Calculator.qml, libqalculate)"
+        "timeout|Launcher file search time limit (coreutils)"
         "zenity|Wallpaper file picker (launcher / qs ipc wallpaper pick)"
         "pkexec|Launcher's \"Sync theme to greeter\" action"
         "jq|Launcher's \"Sync theme to greeter\" action (sync-greeter-preferences.sh)"
@@ -43,7 +38,9 @@ check_dependencies() {
         cmd="${entry%%|*}"
         desc="${entry#*|}"
         if command -v "$cmd" >/dev/null 2>&1; then
-            echo "[ok]      $cmd — $desc"
+            if [ -n "${VERBOSE:-}" ]; then
+                echo "[ok]      $cmd — $desc"
+            fi
         else
             echo "[missing] $cmd — $desc"
             missing+=("$cmd")
@@ -51,7 +48,9 @@ check_dependencies() {
     done
 
     if [ "${#missing[@]}" -gt 0 ]; then
-        warn "Missing: ${missing[*]}. Everything above is used by a specific widget/feature, not the whole shell."
+        warn "Missing: ${missing[*]}. Each is used by a specific widget/feature, not the whole shell."
+    else
+        echo "All ${#deps[@]} CLI tools found."
     fi
 
     check_cursor_theme
@@ -61,7 +60,9 @@ check_cursor_theme() {
     local dir
     for dir in "$HOME/.local/share/icons" "$HOME/.icons" /usr/share/icons /usr/local/share/icons; do
         if [ -d "$dir/Adwaita/cursors" ]; then
-            echo "[ok]      Adwaita cursor theme — cursor for niri, the shell and the greeter ($dir/Adwaita)"
+            if [ -n "${VERBOSE:-}" ]; then
+                echo "[ok]      Adwaita cursor theme — cursor for niri, the shell and the greeter ($dir/Adwaita)"
+            fi
             return 0
         fi
     done

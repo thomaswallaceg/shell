@@ -7,7 +7,8 @@
 #            config, its own repo in ~/.config/niri, is what starts them)
 #   greeter  greetd + cage, so greeter/ becomes the login screen (installs
 #            greeter/ via `make install-greeter` under $PREFIX, default /usr/local)
-#   rust     build+install the callie submodule, and cargo-install wlctl/bluetui
+#   rust     build+install the callie submodule, and cargo-install
+#            wlctl/bluetui/handlr/fend/fd/sk
 #   all      run all of the above, in the order listed (default)
 #
 # `utils` also runs first before `shell`, `greeter` and `rust`
@@ -15,8 +16,14 @@
 # stop on the first failing command (-e)
 # treat using an unset variable as an error (-u)
 # make a pipeline fail if any command in it fails (-o pipefail)
-# print each command, prefixed with "+", right before it runs (-x)
-set -euxo pipefail
+set -euo pipefail
+
+# VERBOSE=1 traces every command (-x) and lists the tools utils found, not
+# just the missing ones. Otherwise only the commands that change the system
+# are printed, through `run` (install/lib.sh).
+if [ -n "${VERBOSE:-}" ]; then
+    set -x
+fi
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Install prefix for the parts that go through the Makefile (same default).
@@ -41,14 +48,15 @@ fi
 
 usage() {
     cat <<EOF
-Usage: $(basename "${BASH_SOURCE[0]}") [utils|shell|greeter|rust|all]
+Usage: [VERBOSE=1] $(basename "${BASH_SOURCE[0]}") [utils|shell|greeter|rust|all]
 
   utils    report which CLI dependencies are installed (also runs
            first before every other target)
   shell    install the shell + systemd units (system-wide)
   greeter  install greetd + cage as the login screen
            (greeter files via make, under PREFIX=$PREFIX)
-  rust     build callie (submodule) + cargo-install wlctl/bluetui
+  rust     build callie (submodule) + cargo-install
+           wlctl/bluetui/handlr/fend/fd/sk
   all      run all of the above (default)
 EOF
 }
@@ -62,7 +70,7 @@ FAILED_STEPS=()
 run_step() {
     local name="$1"
     local status
-
+    echo "==> $name"
     set +e
     ( set -e; "run_$name" )
     status=$?

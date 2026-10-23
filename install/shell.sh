@@ -8,11 +8,12 @@
 # Requires REPO_ROOT and PREFIX to already be set.
 
 install_shell_and_units() {
-    sudo make -C "$REPO_ROOT" PREFIX="$PREFIX" install-shell install-units
+    # -s: make prints its own "Installed ..." lines, not every recipe line.
+    run sudo make -s -C "$REPO_ROOT" PREFIX="$PREFIX" install-shell install-units
 
     # daemon-reload also re-reads environment.d, so units started from now on
     # get the installed QS_CONFIG_PATH.
-    systemctl --user daemon-reload
+    run systemctl --user daemon-reload
 
     # No `enable`: the niri config's shell include starts thomas-shell.service,
     # so swapping shells needs no systemctl.
