@@ -65,6 +65,7 @@ install_cargo_tools() {
 
     check_cargo_tool_update wlctl "$WLCTL_VERSION"
     check_cargo_tool_update bluetui "$BLUETUI_VERSION"
+
     # Crate is handlr-regex, binary is handlr.
     check_cargo_tool_update handlr-regex "$HANDLR_VERSION" HANDLR_VERSION
     check_cargo_tool_update fend "$FEND_VERSION"

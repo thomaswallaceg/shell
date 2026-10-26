@@ -19,6 +19,7 @@ Item {
     readonly property int fileSearchMinLength: 3
     // Launcher only fits ~5-6 rows without scrolling — 20 was just noise.
     readonly property int fileSearchMaxResults: 10
+
     // Guards against pathological searches (huge trees, slow or network
     // mounts): fd is stopped after this long, or after this many paths, and
     // skim ranks whatever had arrived by then.

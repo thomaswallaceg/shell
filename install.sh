@@ -70,7 +70,6 @@ FAILED_STEPS=()
 run_step() {
     local name="$1"
     local status
-
     echo "==> $name"
     set +e
     ( set -e; "run_$name" )

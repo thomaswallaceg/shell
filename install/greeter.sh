@@ -16,7 +16,6 @@ configure_greetd() {
     local src
     src="$(greeter_install_dir)/config.toml"
     local dest=/etc/greetd/config.toml
-
     run sudo mkdir -p "$(dirname "$dest")"
 
     if [ -L "$dest" ]; then
@@ -25,6 +24,7 @@ configure_greetd() {
         fi
         warn "$dest is a symlink pointing elsewhere; relinking to $src."
         run sudo rm "$dest"
+
     elif [ -e "$dest" ]; then
         warn "$dest already exists and is not a symlink."
         local reply
